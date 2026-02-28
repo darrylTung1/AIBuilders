@@ -1,11 +1,9 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
 import * as schema from "./schema";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/menu_engineering";
+const dbFile = process.env.DATABASE_URL?.replace("file:", "") || "./dev.db";
 
-const client = postgres(connectionString, { max: 10 });
-export const db = drizzle(client, { schema });
+const sqlite = new Database(dbFile);
+export const db = drizzle(sqlite, { schema });
 export * from "./schema";
