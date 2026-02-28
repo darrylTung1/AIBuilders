@@ -159,6 +159,11 @@ export default function DashboardPage() {
             <div className="w-20 h-20 bg-navy-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Store className="w-10 h-10 text-navy-600" />
             </div>
+            <div className="flex justify-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-navy-500 animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-navy-500 animate-pulse" style={{ animationDelay: "0.2s" }} />
+              <div className="w-2 h-2 rounded-full bg-navy-500 animate-pulse" style={{ animationDelay: "0.4s" }} />
+            </div>
             <h2 className="text-2xl font-bold text-navy-900 mb-2">Welcome to MenuEngine</h2>
             <p className="text-slate-500 mb-6">
               Get started by creating your first restaurant. You&apos;ll then be able to import menus, analyze profitability, and design beautiful menu layouts.
@@ -184,6 +189,10 @@ export default function DashboardPage() {
           <div className="card p-8 text-center">
             <div className="w-20 h-20 bg-gold-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Utensils className="w-10 h-10 text-gold-600" />
+            </div>
+            <div className="flex justify-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" style={{ animationDelay: "0.2s" }} />
             </div>
             <h2 className="text-2xl font-bold text-navy-900 mb-2">No Menus Yet</h2>
             <p className="text-slate-500 mb-6 max-w-md mx-auto">
@@ -283,20 +292,33 @@ export default function DashboardPage() {
           
           {menuItems.length === 0 ? (
             <div className="card p-8 text-center">
+              <div className="flex justify-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse" style={{ animationDelay: "0.2s" }} />
+              </div>
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Utensils className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="font-semibold text-navy-900 mb-2">No Items in This Menu</h3>
-              <p className="text-slate-500 text-sm mb-4">
-                This menu doesn&apos;t have any items yet. Import menu data or select a different menu.
+              <p className="text-slate-500 text-sm mb-4 max-w-md mx-auto">
+                This menu doesn&apos;t have any items yet. Import menu data from a SQL file to get started. You can also create a new restaurant if you need to manage multiple locations.
               </p>
-              <button
-                onClick={() => setShowImport(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-navy-900 font-medium rounded-lg hover:bg-gold-400 transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                Import Menu Data
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-navy-900 font-medium rounded-lg hover:bg-gold-400 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Import Menu Data
+                </button>
+                <Link
+                  href="/dashboard/restaurants/new"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-navy-700 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
+                >
+                  <Store className="w-4 h-4" />
+                  New Restaurant
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
