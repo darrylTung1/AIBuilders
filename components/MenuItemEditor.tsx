@@ -161,8 +161,12 @@ export function MenuItemEditor({ item, cuisineType, theme, onSave, onDelete }: P
           </label>
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-500 mb-1">Image</label>
-          <ImageUpload value={imageUrl || null} onChange={(url) => { setImageUrl(url); onSave({ imageUrl: url }); }} alt={name} />
+          <ImageUpload
+            label="Food photo"
+            value={imageUrl || null}
+            onChange={(url) => { setImageUrl(url); onSave({ imageUrl: url }); }}
+            alt={name}
+          />
           <button
             type="button"
             onClick={generateImage}

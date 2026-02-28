@@ -13,17 +13,37 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetch("/api/restaurants").then((r) => r.json()), fetch("/api/menus").then((r) => r.json())])
-      .then(([restList, menuList]) => {
-        setRestaurants(Array.isArray(restList) ? restList : []);
-        setMenus(Array.isArray(menuList) ? menuList : []);
+    Promise.all([
+      fetch("/api/restaurants").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/menus").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+    ])
+      .then(([restRes, menuRes]) => {
+        if (!restRes.ok && restRes.data?.error) setError(restRes.data.error);
+        else setRestaurants(Array.isArray(restRes.data) ? restRes.data : []);
+        if (menuRes.ok && Array.isArray(menuRes.data)) setMenus(menuRes.data);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-stone-500">Loading...</div>;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <p className="text-red-700 font-medium">Could not load dashboard</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
+          <p className="text-stone-600 text-xs mt-2">After fixing the issue, refresh the page. Then use &quot;Add Restaurant&quot; to create your first restaurant.</p>
+        </div>
+        <Link
+          href="/dashboard/restaurants/new"
+          className="inline-block rounded-lg bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700"
+        >
+          Add Restaurant
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div>

@@ -22,7 +22,8 @@ export default function NewRestaurantPage() {
         body: JSON.stringify({ name: name.trim(), cuisineType: cuisineType.trim() || undefined, theme: theme.trim() || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to create");
+      if (!res.ok) throw new Error(data.error ?? "Failed to create restaurant");
+      if (!data.id) throw new Error("Server did not return a restaurant ID");
       router.push(`/dashboard/restaurants/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -33,7 +34,11 @@ export default function NewRestaurantPage() {
 
   return (
     <div className="max-w-md">
-      <h1 className="text-2xl font-semibold text-stone-800 mb-6">New Restaurant</h1>
+      <div className="mb-6">
+        <a href="/dashboard" className="text-amber-600 hover:underline text-sm">← Back to Dashboard</a>
+        <h1 className="text-2xl font-semibold text-stone-800 mt-2">Create Restaurant</h1>
+        <p className="text-stone-500 text-sm mt-1">Add a restaurant to start building menus and importing items.</p>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Name *</label>
@@ -65,7 +70,12 @@ export default function NewRestaurantPage() {
             className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900"
           />
         </div>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+            <p className="text-red-700 text-sm">{error}</p>
+            <p className="text-red-600 text-xs mt-1">Check that DATABASE_URL is set and migrations are run (see README).</p>
+          </div>
+        )}
         <button
           type="submit"
           disabled={loading}
