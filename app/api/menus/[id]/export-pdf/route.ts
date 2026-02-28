@@ -1,0 +1,56 @@
+import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { menus, menuItems } from "@/lib/db/schema";
+import { uploadPdf } from "@/lib/storage/upload";
+import { MenuPdfDocument } from "@/lib/pdf/menu-pdf";
+
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const menuId = Number((await params).id);
+  if (Number.isNaN(menuId))
+    return NextResponse.json({ error: "Invalid menu id" }, { status: 400 });
+
+  const [menu] = await db.select().from(menus).where(eq(menus.id, menuId));
+  if (!menu) return NextResponse.json({ error: "Menu not found" }, { status: 404 });
+
+  const items = await db
+    .select()
+    .from(menuItems)
+    .where(eq(menuItems.menuId, menuId))
+    .orderBy(menuItems.sortOrder);
+
+  const { renderToBuffer } = await import("@react-pdf/renderer");
+  const React = await import("react");
+  const docElement = React.createElement(MenuPdfDocument, {
+    menuName: menu.name,
+    items: items.map((i) => ({
+      name: i.name,
+      description: i.description,
+      price: String(i.price),
+      category: i.category,
+      imageUrl: i.imageUrl,
+      isRecommended: i.isRecommended ?? false,
+      fontSizeTier: i.fontSizeTier,
+    })),
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buffer = await renderToBuffer(docElement as any);
+
+  const filename = `menu-${menuId}-${Date.now()}.pdf`;
+  let url: string;
+  try {
+    url = await uploadPdf(Buffer.from(buffer), filename);
+  } catch (e) {
+    return NextResponse.json(
+      { error: "PDF generated but save failed. Ensure public/uploads is writable." },
+      { status: 500 }
+    );
+  }
+
+  await db.update(menus).set({ pdfUrl: url }).where(eq(menus.id, menuId));
+
+  return NextResponse.json({ url, pdfUrl: url });
+}

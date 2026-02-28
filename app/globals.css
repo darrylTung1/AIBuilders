@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: system-ui, sans-serif;
+  --font-body: system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+@layer utilities {
+  .font-tier-high {
+    @apply text-xl font-semibold;
+  }
+  .font-tier-normal {
+    @apply text-base;
+  }
+  .font-tier-low {
+    @apply text-sm text-stone-500;
+  }
+}

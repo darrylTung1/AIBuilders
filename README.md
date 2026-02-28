@@ -1,0 +1,77 @@
+# Restaurant Menu Engineering Tool
+
+AI-powered menu design and analytics: import menus via SQL, generate descriptions and food photography, analyze profitability, and export PDFs.
+
+## Stack
+
+- **Frontend:** Next.js 15 (App Router), React, Tailwind CSS
+- **Backend:** Next.js API routes, PostgreSQL (Drizzle ORM)
+- **AI:** OpenAI or Anthropic (descriptions, pricing), WaveSpeed AI (food images), OpenAI Vision (OCR, competitor analysis)
+- **Storage:** Local `public/uploads` or Cloudinary
+- **Deploy:** Zeabur (one-click from GitHub)
+
+## Setup
+
+1. **Clone and install**
+   ```bash
+   npm install
+   ```
+
+2. **Database**
+   - Create a PostgreSQL database (local or hosted).
+   - Set `DATABASE_URL` in `.env.local`, e.g.:
+     ```
+     DATABASE_URL=postgresql://user:pass@localhost:5432/menu_engineering
+     ```
+   - Run migrations:
+     ```bash
+     npm run db:generate
+     npm run db:migrate
+     ```
+   - Or apply the schema manually from `lib/db/schema.sql`.
+
+3. **Environment (`.env.local`)**
+   - `DATABASE_URL` – PostgreSQL connection string
+   - `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` – for descriptions and pricing (and OCR/Vision if using OpenAI)
+   - `WAVESPEED_API_KEY` – for AI-generated food images
+   - `CLOUDINARY_URL` (optional) – e.g. `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` for image uploads
+   - `NEXT_PUBLIC_APP_URL` – e.g. `http://localhost:3000` for local dev
+
+4. **Run**
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000). Use **Dashboard** to add restaurants, create menus, and import SQL.
+
+## SQL import format
+
+Provide an `INSERT` statement with columns mapping to menu items. Supported column names (case-insensitive): `name`, `description`, `price`, `popularity` (or `sales_count`), `category`.
+
+Example:
+
+```sql
+INSERT INTO menu (name, description, price, popularity, category) VALUES
+('Margherita Pizza', 'Fresh basil and mozzarella', 14.99, 85, 'Mains'),
+('Tiramisu', NULL, 8.50, 120, 'Desserts');
+```
+
+## Deploy on Zeabur
+
+1. Push the repo to GitHub.
+2. In [Zeabur](https://zeabur.com), create a project and add a service: **Deploy from GitHub**.
+3. Select this repo. Zeabur will detect Next.js and set build/start.
+4. Add a **PostgreSQL** service in the same project and link it (set `DATABASE_URL` in the app’s env).
+5. Set the rest of the env vars (API keys, `NEXT_PUBLIC_APP_URL` = your app URL).
+
+## Features
+
+- **Dashboard** – Restaurants and menus list; add restaurant, create menu, import SQL.
+- **Menu design** – Edit items (name, description, price, category, image); AI description and pricing suggestions; “Generate with AI” for food images (WaveSpeed); recommended badge; live preview with popularity-based font tiers.
+- **Analytics** – Per-item profitability (margin, margin %) and popularity; recommended flag.
+- **OCR** – `POST /api/ocr` with image file to extract text from a menu photo.
+- **Vision** – `POST /api/vision/analyze` with image file for competitor menu analysis (items, prices, layout).
+- **PDF export** – From the design page, “Export PDF” generates and downloads the engineered menu.
+
+## License
+
+MIT

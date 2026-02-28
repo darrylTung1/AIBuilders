@@ -1,0 +1,11 @@
+{
+  "name": "menu-engineering-tool",
+  "build": {
+    "command": "npm run build",
+    "outputDir": ".next"
+  },
+  "run": {
+    "command": "npm start",
+    "port": 3000
+  }
+}
