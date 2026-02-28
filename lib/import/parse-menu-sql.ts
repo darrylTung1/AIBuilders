@@ -54,6 +54,7 @@ function parseValueList(str: string): string[] {
   let current = "";
   let inQuote = false;
   let quoteChar = "";
+  let justExitedQuote = false;
   for (let i = 0; i < str.length; i++) {
     const c = str[i];
     if (!inQuote) {
@@ -61,17 +62,23 @@ function parseValueList(str: string): string[] {
         inQuote = true;
         quoteChar = c;
         current = "";
+        justExitedQuote = false;
       } else if (c === ",") {
-        parts.push(current.trim());
+        if (!justExitedQuote) {
+          parts.push(current.trim());
+        }
         current = "";
+        justExitedQuote = false;
       } else {
         current += c;
+        justExitedQuote = false;
       }
     } else {
       if (c === quoteChar && str[i - 1] !== "\\") {
         inQuote = false;
         parts.push(current);
         current = "";
+        justExitedQuote = true;
       } else {
         current += c;
       }
