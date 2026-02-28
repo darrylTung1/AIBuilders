@@ -14,12 +14,21 @@ export async function uploadImage(buffer: Buffer, filename: string, folder = "me
 export async function uploadPdf(buffer: Buffer, filename: string): Promise<string> {
   const path = await import("path");
   const fs = await import("fs/promises");
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const safeName = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  const crypto = await import("crypto");
+  
+  // Generate unique filename to avoid conflicts
+  const timestamp = Date.now();
+  const random = crypto.randomBytes(3).toString("hex");
+  const ext = path.extname(filename);
+  const name = path.basename(filename, ext);
+  const safeName = `${timestamp}-${random}-${name}${ext}`;
+  
   const dir = path.join(process.cwd(), "public", "uploads");
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, safeName), buffer);
-  return `${baseUrl}/uploads/${safeName}`;
+  
+  // Return direct file path for download
+  return `/uploads/${safeName}`;
 }
 
 async function uploadToCloudinary(buffer: Buffer, filename: string, folder: string): Promise<string> {

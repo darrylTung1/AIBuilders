@@ -149,11 +149,10 @@ export default function MenuDesignPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Export failed");
       if (data.url) {
-        // Download the PDF
+        // Create download link
         const link = document.createElement("a");
         link.href = data.url;
         link.download = `${menu?.name || "menu"}.pdf`;
-        link.target = "_blank";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
