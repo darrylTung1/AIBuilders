@@ -8,7 +8,8 @@ import { KpiCards } from "@/components/KpiCards";
 import { MenuItemCard, type MenuItem } from "@/components/MenuItemCard";
 import { ProfitabilityMatrix } from "@/components/ProfitabilityMatrix";
 import { ImportInterface } from "@/components/ImportInterface";
-import { Store, Utensils, Upload, TrendingUp, Palette } from "lucide-react";
+import { EditMenuModal } from "@/components/EditMenuModal";
+import { Store, Utensils, Upload, TrendingUp, Palette, Edit3 } from "lucide-react";
 
 type Restaurant = { id: number; name: string; cuisineType: string | null; theme: string | null };
 type Menu = { id: number; restaurantId: number; name: string; version: number };
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [showImport, setShowImport] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
+  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -115,6 +117,42 @@ export default function DashboardPage() {
       fetchMenuItems(menuId);
     }
   };
+
+  async function updateMenu(menuId: number, name: string) {
+    const res = await fetch(`/api/menus/${menuId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to update menu");
+    }
+    
+    const updatedMenu = await res.json();
+    setMenus(prev => prev.map(m => m.id === menuId ? updatedMenu : m));
+    if (selectedMenu?.id === menuId) {
+      setSelectedMenu(updatedMenu);
+    }
+  }
+
+  async function deleteMenu(menuId: number) {
+    const res = await fetch(`/api/menus/${menuId}`, {
+      method: "DELETE",
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to delete menu");
+    }
+    
+    setMenus(prev => prev.filter(m => m.id !== menuId));
+    if (selectedMenu?.id === menuId) {
+      setSelectedMenu(null);
+      setMenuItems([]);
+    }
+  }
 
   const kpiData = {
     totalItems: menuItems.length,
@@ -227,17 +265,28 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <label className="text-sm font-medium text-slate-600">Active Menu:</label>
-              <select
-                value={selectedMenu?.id || ""}
-                onChange={(e) => handleMenuChange(parseInt(e.target.value))}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-navy-900 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none"
-              >
-                {menus.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedMenu?.id || ""}
+                  onChange={(e) => handleMenuChange(parseInt(e.target.value))}
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-navy-900 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none"
+                >
+                  {menus.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedMenu && (
+                  <button
+                    onClick={() => setEditingMenu(selectedMenu)}
+                    className="p-2 text-slate-500 hover:text-navy-700 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Edit menu name"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
             {selectedMenu && (
               <div className="flex items-center gap-2">
@@ -343,6 +392,16 @@ export default function DashboardPage() {
               onItemClick={(item) => router.push(`/menus/${selectedMenu?.id}/design`)} 
             />
           </section>
+        )}
+
+        {/* Edit Menu Modal */}
+        {editingMenu && (
+          <EditMenuModal
+            menu={editingMenu}
+            onSave={updateMenu}
+            onDelete={deleteMenu}
+            onClose={() => setEditingMenu(null)}
+          />
         )}
       </div>
     </DashboardLayout>

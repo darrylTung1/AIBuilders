@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ImportInterface } from "@/components/ImportInterface";
-import { ArrowLeft, Plus, Palette, TrendingUp, Upload } from "lucide-react";
+import { EditMenuModal } from "@/components/EditMenuModal";
+import { ArrowLeft, Plus, Palette, TrendingUp, Upload, Edit3, Trash2 } from "lucide-react";
 
 type Restaurant = { id: number; name: string; cuisineType: string | null; theme: string | null };
 type Menu = { id: number; restaurantId: number; name: string };
@@ -19,6 +20,7 @@ export default function RestaurantDetailPage() {
   const [menuName, setMenuName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
 
   useEffect(() => {
     if (Number.isNaN(id)) return;
@@ -73,6 +75,35 @@ export default function RestaurantDetailPage() {
       const err = await res.json();
       throw new Error(err.error || "Import failed");
     }
+  }
+
+  async function updateMenu(menuId: number, name: string) {
+    const res = await fetch(`/api/menus/${menuId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to update menu");
+    }
+    
+    const updatedMenu = await res.json();
+    setMenus(prev => prev.map(m => m.id === menuId ? updatedMenu : m));
+  }
+
+  async function deleteMenu(menuId: number) {
+    const res = await fetch(`/api/menus/${menuId}`, {
+      method: "DELETE",
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to delete menu");
+    }
+    
+    setMenus(prev => prev.filter(m => m.id !== menuId));
   }
 
   if (!restaurant) {
@@ -184,6 +215,13 @@ export default function RestaurantDetailPage() {
                   >
                     <span className="font-medium text-navy-900">{m.name}</span>
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingMenu(m)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        Edit
+                      </button>
                       <Link
                         href={`/menus/${m.id}/design`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gold-100 text-gold-700 rounded-lg text-sm font-medium hover:bg-gold-200 transition-colors"
@@ -205,6 +243,16 @@ export default function RestaurantDetailPage() {
             )}
           </div>
         </section>
+
+        {/* Edit Menu Modal */}
+        {editingMenu && (
+          <EditMenuModal
+            menu={editingMenu}
+            onSave={updateMenu}
+            onDelete={deleteMenu}
+            onClose={() => setEditingMenu(null)}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
