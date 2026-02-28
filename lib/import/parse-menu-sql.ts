@@ -26,9 +26,10 @@ export type ParsedMenuItem = {
  */
 function extractValuesFromInsert(sql: string): string[][] {
   const rows: string[][] = [];
-  const valuesStart = sql.search(/VALUES\s*\(/i);
-  if (valuesStart === -1) return rows;
-  const afterValues = sql.slice(valuesStart + 7).trimStart(); // "VALUES ".length
+  const valuesMatch = sql.match(/VALUES\s*/i);
+  if (!valuesMatch) return rows;
+  const valuesStart = valuesMatch.index!;
+  const afterValues = sql.slice(valuesStart + valuesMatch[0].length).trimStart();
   let depth = 0;
   let start = 0;
   for (let i = 0; i < afterValues.length; i++) {
