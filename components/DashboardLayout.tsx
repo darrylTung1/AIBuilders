@@ -1,34 +1,22 @@
 "use client";
 
-import { Sidebar } from "./Sidebar";
-import { DashboardHeader } from "./DashboardHeader";
+import { TopNav } from "./TopNav";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   restaurantName?: string;
-  onImport?: () => void;
 }
 
 export function DashboardLayout({
   children,
-  restaurantName = "Dashboard",
-  onImport,
+  restaurantName,
 }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Sidebar */}
-      <Sidebar />
-
-      {/* Main Content */}
-      <div className="ml-64">
-        <DashboardHeader
-          restaurantName={restaurantName}
-          onImport={onImport}
-        />
-        <main className="p-8">
-          {children}
-        </main>
-      </div>
+      <TopNav />
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {children}
+      </main>
     </div>
   );
 }

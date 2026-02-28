@@ -211,10 +211,7 @@ export default function DashboardPage() {
 
   // Has menus - show full dashboard
   return (
-    <DashboardLayout
-      restaurantName={selectedRestaurant?.name || "Dashboard"}
-      onImport={() => setShowImport(true)}
-    >
+    <DashboardLayout>
       <div className="space-y-8">
         {/* Menu Selector */}
         {menus.length > 0 && (
