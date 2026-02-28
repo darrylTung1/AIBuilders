@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { MenuItemEditor } from "@/components/MenuItemEditor";
 import { MenuPreview } from "@/components/MenuPreview";
 import type { MenuItem, Menu, Restaurant } from "@/lib/db/schema";
+import { ArrowLeft, Sparkles, FileText, TrendingUp } from "lucide-react";
 
 export default function MenuDesignPage() {
   const params = useParams();
@@ -117,8 +119,21 @@ export default function MenuDesignPage() {
     return "normal";
   }
 
-  if (loading) return <div className="py-20 text-center text-stone-500 font-medium">Loading…</div>;
-  if (error || !menu) return <div className="rounded-2xl bg-red-50 border border-red-200 p-6 text-red-700">{error ?? "Menu not found"}</div>;
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="py-20 text-center text-slate-500 font-medium">Loading...</div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !menu) {
+    return (
+      <DashboardLayout>
+        <div className="card border-rose-200 bg-rose-50 p-6 text-rose-700">{error ?? "Menu not found"}</div>
+      </DashboardLayout>
+    );
+  }
 
   const itemsWithTier = items.map((i) => ({
     ...i,
@@ -126,72 +141,85 @@ export default function MenuDesignPage() {
   }));
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <Link href="/dashboard" className="text-amber-600 hover:text-amber-700 font-medium text-sm">← Dashboard</Link>
-          <h1 className="text-2xl font-bold text-stone-900 mt-1">{menu.name}</h1>
-          <p className="text-stone-500 text-sm mt-0.5">Design</p>
+    <DashboardLayout restaurantName={restaurant?.name}>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <Link href="/dashboard" className="inline-flex items-center gap-2 text-navy-600 hover:text-navy-800 font-medium text-sm mb-2">
+              <ArrowLeft className="w-4 h-4" />
+              Dashboard
+            </Link>
+            <h1 className="text-2xl font-bold text-navy-900">{menu.name}</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Design & Edit</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={enrichMenu}
+              disabled={enriching || items.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl bg-gold-500 text-navy-900 px-5 py-2.5 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              {enriching ? "AI processing..." : "AI-enrich menu"}
+            </button>
+            <button
+              type="button"
+              onClick={exportPdf}
+              disabled={exportingPdf || items.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl bg-navy-900 text-white px-5 py-2.5 text-sm font-semibold hover:bg-navy-800 disabled:opacity-50 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              {exportingPdf ? "Exporting..." : "Export PDF"}
+            </button>
+            <Link
+              href={`/menus/${menuId}/analytics`}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Analytics
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={enrichMenu}
-            disabled={enriching || items.length === 0}
-            className="rounded-xl bg-amber-500 text-white px-5 py-2.5 text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors"
-          >
-            {enriching ? "AI processing…" : "AI-enrich menu"}
-          </button>
-          <button
-            type="button"
-            onClick={exportPdf}
-            disabled={exportingPdf || items.length === 0}
-            className="rounded-xl bg-stone-800 text-white px-5 py-2.5 text-sm font-semibold hover:bg-stone-700 disabled:opacity-50 transition-colors"
-          >
-            {exportingPdf ? "Exporting…" : "Export PDF"}
-          </button>
-          <Link
-            href={`/menus/${menuId}/analytics`}
-            className="rounded-xl border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
-          >
-            Analytics
-          </Link>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/80">
-            <h2 className="font-semibold text-stone-800">Edit items</h2>
-            <p className="text-stone-500 text-sm mt-0.5">Update names, descriptions, prices, photos, and recommended badges.</p>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Edit Items Panel */}
+          <div className="card overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <h2 className="font-semibold text-navy-900">Edit Items</h2>
+              <p className="text-slate-500 text-sm mt-0.5">Update names, descriptions, prices, photos, and recommended badges.</p>
+            </div>
+            <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto">
+              {items.length === 0 ? (
+                <p className="text-slate-500 py-6 text-center text-sm">No items yet. Go to the restaurant page and import from SQL or create a blank menu.</p>
+              ) : (
+                items.map((item) => (
+                  <MenuItemEditor
+                    key={item.id}
+                    item={item}
+                    cuisineType={restaurant?.cuisineType ?? undefined}
+                    theme={restaurant?.theme ?? undefined}
+                    onSave={(updates) => updateItem(item.id, updates)}
+                    onDelete={() => deleteItem(item.id)}
+                  />
+                ))
+              )}
+            </div>
           </div>
-          <div className="p-5 space-y-4">
-            {items.length === 0 ? (
-              <p className="text-stone-500 py-6 text-center text-sm">No items yet. Go to the restaurant page and import from SQL or create a blank menu.</p>
-            ) : (
-              items.map((item) => (
-                <MenuItemEditor
-                  key={item.id}
-                  item={item}
-                  cuisineType={restaurant?.cuisineType ?? undefined}
-                  theme={restaurant?.theme ?? undefined}
-                  onSave={(updates) => updateItem(item.id, updates)}
-                  onDelete={() => deleteItem(item.id)}
-                />
-              ))
-            )}
-          </div>
-        </div>
-        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/80">
-            <h2 className="font-semibold text-stone-800">Preview</h2>
-            <p className="text-stone-500 text-sm mt-0.5">How your menu will look.</p>
-          </div>
-          <div className="p-5">
-            <MenuPreview items={itemsWithTier} title={menu.name} />
+
+          {/* Preview Panel */}
+          <div className="card overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <h2 className="font-semibold text-navy-900">Preview</h2>
+              <p className="text-slate-500 text-sm mt-0.5">How your menu will look.</p>
+            </div>
+            <div className="p-6">
+              <MenuPreview items={itemsWithTier} title={menu.name} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
