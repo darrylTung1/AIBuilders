@@ -17,6 +17,7 @@ export default function MenuDesignPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [enriching, setEnriching] = useState(false);
 
   useEffect(() => {
     if (Number.isNaN(menuId)) return;
@@ -78,6 +79,31 @@ export default function MenuDesignPage() {
     }
   }
 
+  async function enrichMenu() {
+    if (items.length === 0) return;
+    setEnriching(true);
+    try {
+      const res = await fetch(`/api/menus/${menuId}/enrich`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ descriptions: true, recommendations: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Enrich failed");
+      // Refetch items to show updated descriptions and recommended badges
+      const itemsRes = await fetch(`/api/menus/${menuId}/items`);
+      const nextItems = await itemsRes.json();
+      setItems(Array.isArray(nextItems) ? nextItems : []);
+      if (data.errors?.length) {
+        alert(`Enriched ${data.updated} item(s). Some errors: ${data.errors.slice(0, 3).join("; ")}`);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Enrich failed. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.");
+    } finally {
+      setEnriching(false);
+    }
+  }
+
   function computeFontTier(popularityScore: string | null): "high" | "normal" | "low" {
     if (popularityScore == null) return "normal";
     const scores = items.map((i) => (i.popularityScore != null ? Number(i.popularityScore) : 0));
@@ -107,7 +133,15 @@ export default function MenuDesignPage() {
           <h1 className="text-2xl font-bold text-stone-900 mt-1">{menu.name}</h1>
           <p className="text-stone-500 text-sm mt-0.5">Design</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={enrichMenu}
+            disabled={enriching || items.length === 0}
+            className="rounded-xl bg-amber-500 text-white px-5 py-2.5 text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors"
+          >
+            {enriching ? "AI processing…" : "AI-enrich menu"}
+          </button>
           <button
             type="button"
             onClick={exportPdf}
