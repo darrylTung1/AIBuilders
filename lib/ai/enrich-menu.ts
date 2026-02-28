@@ -5,7 +5,7 @@
 
 import { generateFoodImage } from "./wavespeed";
 import { uploadImage } from "@/lib/storage/upload";
-import type { MenuItem, Restaurant } from "@/lib/db/schema";
+import type { MenuItem } from "@/lib/db/schema";
 
 export type EnrichOptions = {
   images?: boolean;          // Generate AI food images for items that lack one
@@ -20,12 +20,13 @@ export type EnrichResult = {
 
 export async function enrichMenuWithAI(
   items: MenuItem[],
-  restaurant: Pick<Restaurant, "cuisineType" | "theme"> | null,
+  // Restaurant context removed - no restaurant functionality
   options: EnrichOptions
 ): Promise<EnrichResult> {
   const { images = true, recommendations = true } = options;
-  const cuisineType = restaurant?.cuisineType ?? undefined;
-  const theme = restaurant?.theme ?? undefined;
+  // No restaurant context - using default values
+  const cuisineType = undefined;
+  const theme = undefined;
   const errors: string[] = [];
   const updated: EnrichResult["items"] = [];
 

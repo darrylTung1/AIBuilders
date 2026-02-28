@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { menus, menuItems, restaurants } from "@/lib/db/schema";
+import { menus, menuItems } from "@/lib/db/schema";
 import { enrichMenuWithAI } from "@/lib/ai/enrich-menu";
 
 export async function POST(
@@ -31,13 +31,10 @@ export async function POST(
     .where(eq(menuItems.menuId, menuId))
     .orderBy(menuItems.sortOrder);
 
-  let restaurant: { cuisineType: string | null; theme: string | null } | null = null;
-  if (menu.restaurantId) {
-    const [r] = await db.select({ cuisineType: restaurants.cuisineType, theme: restaurants.theme }).from(restaurants).where(eq(restaurants.id, menu.restaurantId));
-    restaurant = r ?? null;
-  }
+  // No restaurant context needed since we removed restaurant functionality
+  const restaurant: { cuisineType: string | null; theme: string | null } | null = null;
 
-  const result = await enrichMenuWithAI(items, restaurant, options);
+  const result = await enrichMenuWithAI(items, options);
 
   // Apply updates to the database
   for (const u of result.items) {

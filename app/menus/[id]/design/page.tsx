@@ -6,7 +6,7 @@ import Link from "next/link";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { MenuItemEditor } from "@/components/MenuItemEditor";
 import { MenuDesignPreview, TEMPLATES } from "@/components/MenuDesignPreview";
-import type { MenuItem, Menu, Restaurant } from "@/lib/db/schema";
+import type { MenuItem, Menu } from "@/lib/db/schema";
 import type { MenuDesignSuggestion } from "@/app/api/ai/design-menu/route";
 import { ArrowLeft, FileText, TrendingUp, Wand2, Check, Loader2, Star, ChefHat, ImageIcon, X, Download, AlertCircle } from "lucide-react";
 
@@ -19,7 +19,7 @@ export default function MenuDesignPage() {
   const params = useParams();
   const menuId = Number(params.id);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  // Restaurant functionality removed - working with menus directly
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +46,7 @@ export default function MenuDesignPage() {
         const menuData = await menuRes.json();
         if (menuData.error) throw new Error(menuData.error);
         setMenu(menuData);
-        if (menuData.restaurantId) {
-          const restRes = await fetch(`/api/restaurants/${menuData.restaurantId}`);
-          const restData = await restRes.json();
-          if (!restData.error) setRestaurant(restData);
-        }
+        // Restaurant functionality removed - no restaurant context needed
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -82,9 +78,10 @@ export default function MenuDesignPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          restaurantName: restaurant?.name,
-          cuisineType: restaurant?.cuisineType,
-          theme: restaurant?.theme,
+          // No restaurant context needed
+          restaurantName: undefined,
+          cuisineType: undefined,
+          theme: undefined,
           items: itemsData,
         }),
       });
@@ -244,7 +241,7 @@ export default function MenuDesignPage() {
   const itemsWithoutImages = items.filter(i => !i.imageUrl).length;
 
   return (
-    <DashboardLayout restaurantName={restaurant?.name}>
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -421,8 +418,8 @@ export default function MenuDesignPage() {
                   <MenuItemEditor
                     key={item.id}
                     item={item}
-                    cuisineType={restaurant?.cuisineType ?? undefined}
-                    theme={restaurant?.theme ?? undefined}
+                    cuisineType={undefined}
+                    theme={undefined}
                     onSave={(updates) => updateItem(item.id, updates)}
                     onDelete={() => deleteItem(item.id)}
                   />
@@ -466,7 +463,7 @@ export default function MenuDesignPage() {
                     layout: { columns: 2, showImages: true, showDescriptions: true, categoryOrder: [] },
                     reasoning: "",
                   }}
-                  restaurantName={restaurant?.name}
+                  restaurantName={undefined}
                 />
               </div>
             </div>
