@@ -154,15 +154,17 @@ Only output valid JSON, no other text.`;
 
 // Fallback design when no AI is available
 function getFallbackDesign(params: DesignRequest): MenuDesignSuggestion {
-  const { cuisineType = "", theme = "", items = [] } = params;
-  const cuisine = cuisineType.toLowerCase();
-  const atmosphere = theme.toLowerCase();
+  const { cuisineType, theme, items = [] } = params;
+  const cuisine = (cuisineType || "").toLowerCase();
+  const atmosphere = (theme || "").toLowerCase();
   const categories = [...new Set(items.map(i => i.category || "Menu"))];
 
   const defaultOrder = ["starters", "appetizers", "salads", "soups", "mains", "entrees", "pasta", "pizza", "seafood", "meat", "sides", "desserts", "drinks", "beverages"];
   const sortedCategories = [...categories].sort((a, b) => {
-    const aIdx = defaultOrder.findIndex(d => a.toLowerCase().includes(d));
-    const bIdx = defaultOrder.findIndex(d => b.toLowerCase().includes(d));
+    const aLower = (a || "").toLowerCase();
+    const bLower = (b || "").toLowerCase();
+    const aIdx = defaultOrder.findIndex(d => aLower.includes(d));
+    const bIdx = defaultOrder.findIndex(d => bLower.includes(d));
     if (aIdx === -1 && bIdx === -1) return 0;
     if (aIdx === -1) return 1;
     if (bIdx === -1) return -1;
