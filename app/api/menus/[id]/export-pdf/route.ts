@@ -6,7 +6,7 @@ import { uploadPdf } from "@/lib/storage/upload";
 import { MenuPdfDocument } from "@/lib/pdf/menu-pdf";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const menuId = Number((await params).id);
@@ -15,6 +15,20 @@ export async function POST(
 
   const [menu] = await db.select().from(menus).where(eq(menus.id, menuId));
   if (!menu) return NextResponse.json({ error: "Menu not found" }, { status: 404 });
+
+  // Parse request body for template options
+  let template: "modern" | "classic" | "elegant" | "rustic" = "modern";
+  let colorScheme = undefined;
+  let categoryOrder = undefined;
+
+  try {
+    const body = await request.json();
+    if (body.template) template = body.template;
+    if (body.design?.colorScheme) colorScheme = body.design.colorScheme;
+    if (body.design?.layout?.categoryOrder) categoryOrder = body.design.layout.categoryOrder;
+  } catch {
+    // Use defaults
+  }
 
   const items = await db
     .select()
@@ -26,6 +40,9 @@ export async function POST(
   const React = await import("react");
   const docElement = React.createElement(MenuPdfDocument, {
     menuName: menu.name,
+    template,
+    colorScheme,
+    categoryOrder,
     items: items.map((i) => ({
       name: i.name,
       description: i.description,
@@ -39,7 +56,7 @@ export async function POST(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(docElement as any);
 
-  const filename = `menu-${menuId}-${Date.now()}.pdf`;
+  const filename = `menu-${menuId}-${template}-${Date.now()}.pdf`;
   let url: string;
   try {
     url = await uploadPdf(Buffer.from(buffer), filename);
