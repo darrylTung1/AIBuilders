@@ -32,7 +32,7 @@ AI-powered menu design and analytics: import menus via SQL, generate description
    ```bash
    npm run dev
    ```
-   Open [http://localhost:3000](http://localhost:3000). Use **Dashboard** to add restaurants, create menus, and import SQL.
+   Open [http://localhost:3000](http://localhost:3000). Use **Dashboard** to create menus and import SQL.
 
 ## SQL import format
 
@@ -57,7 +57,7 @@ INSERT INTO menu (name, description, price, popularity, category) VALUES
 
 ## Features
 
-- **Dashboard** – Restaurants and menus list; add restaurant, create menu, import SQL.
+- **Dashboard** – Menus list; create menu, import SQL.
 - **Menu design** – Edit items (name, description, price, category, image); **AI-enrich menu** (batch-generates descriptions from restaurant cuisine/theme and sets recommended badges from popularity); per-item AI description and pricing; “Generate with AI” for food images (WaveSpeed); live preview with popularity-based font tiers.
 - **Analytics** – Per-item profitability (margin, margin %) and popularity; recommended flag.
 - **OCR** – `POST /api/ocr` with image file to extract text from a menu photo.

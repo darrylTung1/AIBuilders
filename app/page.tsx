@@ -28,19 +28,13 @@ export default function HomePage() {
               Import your menu via SQL, add photos and descriptions, highlight bestsellers, and export polished menus with professional analytics.
             </p>
 
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mt-10">
               <Link
                 href="/dashboard"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold-500 px-8 py-4 text-navy-900 font-semibold hover:bg-gold-400 transition-colors shadow-lg shadow-gold-500/20"
               >
                 Go to Dashboard
                 <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link
-                href="/dashboard/restaurants/new"
-                className="inline-flex items-center justify-center rounded-xl border-2 border-navy-600 px-8 py-4 text-white font-semibold hover:border-navy-500 hover:bg-navy-800/50 transition-colors"
-              >
-                Add your first restaurant
               </Link>
             </div>
           </div>

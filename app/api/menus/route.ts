@@ -6,12 +6,10 @@ const db = new Database("./dev.db");
 db.exec(`
   CREATE TABLE IF NOT EXISTS menus (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    restaurant_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     version INTEGER NOT NULL DEFAULT 1,
     pdf_url TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (restaurant_id) REFERENCES restaurants (id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 
@@ -43,11 +41,11 @@ export async function POST(request: Request) {
     }
     
     const stmt = db.prepare(`
-      INSERT INTO menus (restaurant_id, name, version) 
-      VALUES (?, ?, ?)
+      INSERT INTO menus (name, version) 
+      VALUES (?, ?)
     `);
     
-    const result = stmt.run(restaurantId, name.trim(), 1);
+    const result = stmt.run(name.trim(), 1);
     const id = result.lastInsertRowid as number;
     
     const selectStmt = db.prepare(`SELECT * FROM menus WHERE id = ?`);

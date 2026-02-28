@@ -11,8 +11,7 @@ import { ImportInterface } from "@/components/ImportInterface";
 import { EditMenuModal } from "@/components/EditMenuModal";
 import { Store, Utensils, Upload, TrendingUp, Palette, Edit3 } from "lucide-react";
 
-type Restaurant = { id: number; name: string; cuisineType: string | null; theme: string | null };
-type Menu = { id: number; restaurantId: number; name: string; version: number };
+type Menu = { id: number; name: string; version: number };
 type MenuItemFromApi = {
   id: number;
   menuId: number;
@@ -27,34 +26,27 @@ type MenuItemFromApi = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/restaurants").then(async (r) => ({ ok: r.ok, data: await r.json() })),
-      fetch("/api/menus").then(async (r) => ({ ok: r.ok, data: await r.json() })),
-    ])
-      .then(([restRes, menuRes]) => {
-        if (!restRes.ok && restRes.data?.error) setError(restRes.data.error);
-        else {
-          const rests = Array.isArray(restRes.data) ? restRes.data : [];
-          setRestaurants(rests);
-          if (rests.length > 0) setSelectedRestaurant(rests[0]);
+    fetch("/api/menus")
+      .then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json();
+          throw new Error(data.error || "Failed to fetch menus");
         }
-        if (menuRes.ok && Array.isArray(menuRes.data)) {
-          setMenus(menuRes.data);
-          if (menuRes.data.length > 0) {
-            setSelectedMenu(menuRes.data[0]);
-            fetchMenuItems(menuRes.data[0].id);
-          }
+        const data = await r.json();
+        const menuList = Array.isArray(data) ? data : [];
+        setMenus(menuList);
+        if (menuList.length > 0) {
+          setSelectedMenu(menuList[0]);
+          fetchMenuItems(menuList[0].id);
         }
       })
       .catch((e) => setError(e.message))
@@ -84,14 +76,11 @@ export default function DashboardPage() {
   };
 
   const handleImport = async (sql: string, fileName?: string) => {
-    if (!selectedRestaurant) return;
-
     const res = await fetch("/api/menus/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sql: sql.trim(),
-        restaurantId: selectedRestaurant.id,
         menuName: fileName || "Imported Menu",
       }),
     });
@@ -188,42 +177,11 @@ export default function DashboardPage() {
     );
   }
 
-  // No restaurants - show onboarding
-  if (restaurants.length === 0) {
+  // No menus - show onboarding
+  if (menus.length === 0) {
     return (
       <DashboardLayout>
         <div className="max-w-lg mx-auto py-12">
-          <div className="card p-8 text-center">
-            <div className="w-20 h-20 bg-navy-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Store className="w-10 h-10 text-navy-600" />
-            </div>
-            <div className="flex justify-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-navy-500 animate-pulse" />
-              <div className="w-2 h-2 rounded-full bg-navy-500 animate-pulse" style={{ animationDelay: "0.2s" }} />
-              <div className="w-2 h-2 rounded-full bg-navy-500 animate-pulse" style={{ animationDelay: "0.4s" }} />
-            </div>
-            <h2 className="text-2xl font-bold text-navy-900 mb-2">Welcome to MenuEngine</h2>
-            <p className="text-slate-500 mb-6">
-              Get started by creating your first restaurant. You&apos;ll then be able to import menus, analyze profitability, and design beautiful menu layouts.
-            </p>
-            <Link
-              href="/dashboard/restaurants/new"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
-            >
-              <Store className="w-5 h-5" />
-              Create Your First Restaurant
-            </Link>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // Has restaurant but no menus
-  if (menus.length === 0) {
-    return (
-      <DashboardLayout restaurantName={selectedRestaurant?.name}>
-        <div className="space-y-6">
           <div className="card p-8 text-center">
             <div className="w-20 h-20 bg-gold-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Utensils className="w-10 h-10 text-gold-600" />
@@ -233,15 +191,15 @@ export default function DashboardPage() {
               <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" style={{ animationDelay: "0.2s" }} />
             </div>
             <h2 className="text-2xl font-bold text-navy-900 mb-2">No Menus Yet</h2>
-            <p className="text-slate-500 mb-6 max-w-md mx-auto">
-              Import your menu data from a SQL file to start analyzing profitability and designing your menu. Your menu should include item names, descriptions, prices, and popularity scores.
+            <p className="text-slate-500 mb-6">
+              Get started by importing your first menu. You&apos;ll then be able to analyze profitability, add photos, and design beautiful menu layouts.
             </p>
             <button
               onClick={() => setShowImport(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
             >
               <Upload className="w-5 h-5" />
-              Import Your Menu
+              Import Your First Menu
             </button>
           </div>
 
@@ -255,6 +213,8 @@ export default function DashboardPage() {
       </DashboardLayout>
     );
   }
+
+
 
   // Has menus - show full dashboard
   return (
