@@ -6,17 +6,13 @@ import { DashboardHeader } from "./DashboardHeader";
 interface DashboardLayoutProps {
   children: React.ReactNode;
   restaurantName?: string;
-  onAddItem?: () => void;
   onImport?: () => void;
-  onGenerateReport?: () => void;
 }
 
 export function DashboardLayout({
   children,
-  restaurantName = "Bella Vista Restaurant",
-  onAddItem,
+  restaurantName = "Dashboard",
   onImport,
-  onGenerateReport,
 }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50">
@@ -27,9 +23,7 @@ export function DashboardLayout({
       <div className="ml-64">
         <DashboardHeader
           restaurantName={restaurantName}
-          onAddItem={onAddItem}
           onImport={onImport}
-          onGenerateReport={onGenerateReport}
         />
         <main className="p-8">
           {children}

@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { KpiCards } from "@/components/KpiCards";
 import { MenuItemCard, type MenuItem } from "@/components/MenuItemCard";
 import { ProfitabilityMatrix } from "@/components/ProfitabilityMatrix";
 import { ImportInterface } from "@/components/ImportInterface";
-import { Plus, Upload, FileText, Store } from "lucide-react";
+import { Store, Utensils, Upload, TrendingUp, Palette } from "lucide-react";
 
 type Restaurant = { id: number; name: string; cuisineType: string | null; theme: string | null };
 type Menu = { id: number; restaurantId: number; name: string; version: number };
@@ -24,6 +25,7 @@ type MenuItemFromApi = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -46,8 +49,8 @@ export default function DashboardPage() {
         }
         if (menuRes.ok && Array.isArray(menuRes.data)) {
           setMenus(menuRes.data);
-          // Fetch items for first menu
           if (menuRes.data.length > 0) {
+            setSelectedMenu(menuRes.data[0]);
             fetchMenuItems(menuRes.data[0].id);
           }
         }
@@ -61,7 +64,6 @@ export default function DashboardPage() {
       const res = await fetch(`/api/menus/${menuId}/items`);
       if (res.ok) {
         const data = await res.json();
-        // Convert API data to MenuItem format
         const items: MenuItem[] = data.map((item: MenuItemFromApi) => ({
           id: item.id,
           name: item.name,
@@ -81,24 +83,7 @@ export default function DashboardPage() {
 
   const handleImport = async (sql: string, fileName?: string) => {
     if (!selectedRestaurant) return;
-    
-    // Create a menu first if none exists
-    let menuId = menus[0]?.id;
-    if (!menuId) {
-      const res = await fetch("/api/menus", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          restaurantId: selectedRestaurant.id,
-          name: "Imported Menu",
-        }),
-      });
-      const newMenu = await res.json();
-      menuId = newMenu.id;
-      setMenus([...menus, newMenu]);
-    }
 
-    // Import the SQL
     const res = await fetch("/api/menus/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -112,6 +97,8 @@ export default function DashboardPage() {
     if (res.ok) {
       const data = await res.json();
       if (data.menu?.id) {
+        setMenus((prev) => [...prev, data.menu]);
+        setSelectedMenu(data.menu);
         fetchMenuItems(data.menu.id);
         setShowImport(false);
       }
@@ -121,15 +108,20 @@ export default function DashboardPage() {
     }
   };
 
+  const handleMenuChange = (menuId: number) => {
+    const menu = menus.find((m) => m.id === menuId);
+    if (menu) {
+      setSelectedMenu(menu);
+      fetchMenuItems(menuId);
+    }
+  };
+
   const kpiData = {
     totalItems: menuItems.length,
     avgProfitMargin: menuItems.length > 0
       ? menuItems.reduce((acc, item) => acc + item.profitMargin, 0) / menuItems.length
       : 0,
     topPerformers: menuItems.filter((item) => item.profitMargin >= 60 && item.popularityScore >= 70).length,
-    itemsChange: menuItems.length > 0 ? 12 : 0,
-    marginChange: 5.2,
-    topChange: 8,
   };
 
   if (loading) {
@@ -150,55 +142,119 @@ export default function DashboardPage() {
             <p className="font-semibold text-rose-800">Could not load dashboard</p>
             <p className="text-rose-700 text-sm mt-1">{error}</p>
             <p className="text-slate-600 text-xs mt-3">
-              After fixing the issue, refresh the page. Then use &quot;Add Restaurant&quot; to create your first restaurant.
+              Check your database connection and refresh the page.
             </p>
           </div>
-          <Link
-            href="/dashboard/restaurants/new"
-            className="inline-flex items-center rounded-xl bg-gold-500 px-6 py-3 text-navy-900 font-semibold hover:bg-gold-400 transition-colors"
-          >
-            Add Restaurant
-          </Link>
         </div>
       </DashboardLayout>
     );
   }
 
+  // No restaurants - show onboarding
+  if (restaurants.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-lg mx-auto py-12">
+          <div className="card p-8 text-center">
+            <div className="w-20 h-20 bg-navy-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Store className="w-10 h-10 text-navy-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-navy-900 mb-2">Welcome to MenuEngine</h2>
+            <p className="text-slate-500 mb-6">
+              Get started by creating your first restaurant. You&apos;ll then be able to import menus, analyze profitability, and design beautiful menu layouts.
+            </p>
+            <Link
+              href="/dashboard/restaurants/new"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
+            >
+              <Store className="w-5 h-5" />
+              Create Your First Restaurant
+            </Link>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Has restaurant but no menus
+  if (menus.length === 0) {
+    return (
+      <DashboardLayout restaurantName={selectedRestaurant?.name}>
+        <div className="space-y-6">
+          <div className="card p-8 text-center">
+            <div className="w-20 h-20 bg-gold-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Utensils className="w-10 h-10 text-gold-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-navy-900 mb-2">No Menus Yet</h2>
+            <p className="text-slate-500 mb-6 max-w-md mx-auto">
+              Import your menu data from a SQL file to start analyzing profitability and designing your menu. Your menu should include item names, descriptions, prices, and popularity scores.
+            </p>
+            <button
+              onClick={() => setShowImport(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
+            >
+              <Upload className="w-5 h-5" />
+              Import Your Menu
+            </button>
+          </div>
+
+          {showImport && (
+            <ImportInterface
+              onImport={handleImport}
+              onCancel={() => setShowImport(false)}
+            />
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Has menus - show full dashboard
   return (
     <DashboardLayout
-      restaurantName={selectedRestaurant?.name || "Select Restaurant"}
-      onAddItem={() => console.log("Add item")}
+      restaurantName={selectedRestaurant?.name || "Dashboard"}
       onImport={() => setShowImport(true)}
-      onGenerateReport={() => console.log("Generate report")}
     >
       <div className="space-y-8">
-        {/* Restaurant Selector */}
-        {restaurants.length > 1 && (
-          <div className="flex items-center gap-4">
-            <Store className="w-5 h-5 text-slate-400" />
-            <select
-              value={selectedRestaurant?.id || ""}
-              onChange={(e) => {
-                const rest = restaurants.find((r) => r.id === parseInt(e.target.value));
-                setSelectedRestaurant(rest || null);
-              }}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none"
-            >
-              {restaurants.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+        {/* Menu Selector */}
+        {menus.length > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-slate-600">Active Menu:</label>
+              <select
+                value={selectedMenu?.id || ""}
+                onChange={(e) => handleMenuChange(parseInt(e.target.value))}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-navy-900 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none"
+              >
+                {menus.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedMenu && (
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/menus/${selectedMenu.id}/design`}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-navy-700 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
+                >
+                  <Palette className="w-4 h-4" />
+                  Design
+                </Link>
+                <Link
+                  href={`/menus/${selectedMenu.id}/analytics`}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-navy-700 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Analytics
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
-        {/* KPI Cards */}
-        <section>
-          <KpiCards data={kpiData} />
-        </section>
-
-        {/* Import Interface */}
+        {/* Import Interface (toggled) */}
         {showImport && (
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -207,7 +263,7 @@ export default function DashboardPage() {
                 onClick={() => setShowImport(false)}
                 className="text-sm text-slate-500 hover:text-slate-700"
               >
-                Close
+                Cancel
               </button>
             </div>
             <ImportInterface
@@ -217,114 +273,58 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* No Restaurant State */}
-        {restaurants.length === 0 && (
-          <section className="card p-8 text-center">
-            <div className="w-16 h-16 bg-navy-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Store className="w-8 h-8 text-navy-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-navy-900 mb-2">No Restaurant Yet</h3>
-            <p className="text-slate-500 text-sm mb-4">Create your first restaurant to start managing menus.</p>
-            <Link
-              href="/dashboard/restaurants/new"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Restaurant
-            </Link>
-          </section>
-        )}
-
-        {/* Menu Items Grid */}
-        {restaurants.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-navy-900">Menu Items</h2>
-                <p className="text-slate-500 text-sm">Manage and analyze your menu offerings</p>
-              </div>
-              <Link
-                href="/dashboard/restaurants/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-navy-900 text-white font-medium rounded-lg hover:bg-navy-800 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Restaurant
-              </Link>
-            </div>
-            
-            {menuItems.length === 0 ? (
-              <div className="card p-8 text-center">
-                <p className="text-slate-500 mb-4">No menu items yet. Import a menu to get started.</p>
-                <button
-                  onClick={() => setShowImport(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-lg hover:bg-gold-400 transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  Import Menu
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {menuItems.map((item) => (
-                  <MenuItemCard
-                    key={item.id}
-                    item={item}
-                    onView={(id) => console.log("View:", id)}
-                    onEdit={(id) => console.log("Edit:", id)}
-                    onDelete={(id) => console.log("Delete:", id)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Profitability Matrix */}
+        {/* KPI Cards */}
         {menuItems.length > 0 && (
           <section>
-            <ProfitabilityMatrix items={menuItems} onItemClick={(item) => console.log("Clicked:", item)} />
+            <KpiCards data={kpiData} />
           </section>
         )}
 
-        {/* Quick Actions */}
-        <section className="card p-6">
-          <h2 className="text-lg font-bold text-navy-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Link
-              href="/dashboard/restaurants/new"
-              className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl hover:border-gold-400 hover:bg-gold-50 transition-all"
-            >
-              <div className="w-10 h-10 bg-gold-100 rounded-lg flex items-center justify-center">
-                <Plus className="w-5 h-5 text-gold-600" />
+        {/* Menu Items */}
+        <section>
+          <h2 className="text-lg font-bold text-navy-900 mb-4">Menu Items</h2>
+          
+          {menuItems.length === 0 ? (
+            <div className="card p-8 text-center">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Utensils className="w-8 h-8 text-slate-400" />
               </div>
-              <div>
-                <p className="font-medium text-navy-900">Add Restaurant</p>
-                <p className="text-xs text-slate-500">Create a new restaurant</p>
-              </div>
-            </Link>
-            <button
-              onClick={() => setShowImport(true)}
-              className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl hover:border-navy-400 hover:bg-navy-50 transition-all text-left"
-            >
-              <div className="w-10 h-10 bg-navy-100 rounded-lg flex items-center justify-center">
-                <Upload className="w-5 h-5 text-navy-600" />
-              </div>
-              <div>
-                <p className="font-medium text-navy-900">Import Menu</p>
-                <p className="text-xs text-slate-500">Upload SQL or CSV file</p>
-              </div>
-            </button>
-            <button className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left">
-              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="font-medium text-navy-900">Generate Report</p>
-                <p className="text-xs text-slate-500">Export analytics PDF</p>
-              </div>
-            </button>
-          </div>
+              <h3 className="font-semibold text-navy-900 mb-2">No Items in This Menu</h3>
+              <p className="text-slate-500 text-sm mb-4">
+                This menu doesn&apos;t have any items yet. Import menu data or select a different menu.
+              </p>
+              <button
+                onClick={() => setShowImport(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-navy-900 font-medium rounded-lg hover:bg-gold-400 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Import Menu Data
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {menuItems.map((item) => (
+                <MenuItemCard
+                  key={item.id}
+                  item={item}
+                  onView={(id) => router.push(`/menus/${selectedMenu?.id}/design`)}
+                  onEdit={(id) => router.push(`/menus/${selectedMenu?.id}/design`)}
+                  onDelete={(id) => console.log("Delete:", id)}
+                />
+              ))}
+            </div>
+          )}
         </section>
+
+        {/* Profitability Matrix - only show when there are items */}
+        {menuItems.length > 0 && (
+          <section>
+            <ProfitabilityMatrix 
+              items={menuItems} 
+              onItemClick={(item) => router.push(`/menus/${selectedMenu?.id}/design`)} 
+            />
+          </section>
+        )}
       </div>
     </DashboardLayout>
   );
