@@ -38,29 +38,40 @@ export async function POST(
 
   const { renderToBuffer } = await import("@react-pdf/renderer");
   const React = await import("react");
-  const docElement = React.createElement(MenuPdfDocument, {
-    menuName: menu.name,
-    template,
-    colorScheme,
-    categoryOrder,
-    items: items.map((i) => ({
-      name: i.name,
-      description: i.description,
-      price: String(i.price),
-      category: i.category,
-      imageUrl: i.imageUrl,
-      isRecommended: i.isRecommended ?? false,
-      fontSizeTier: i.fontSizeTier,
-    })),
-  });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buffer = await renderToBuffer(docElement as any);
+  
+  let buffer: Buffer;
+  try {
+    const docElement = React.createElement(MenuPdfDocument, {
+      menuName: menu.name,
+      template,
+      colorScheme,
+      categoryOrder,
+      items: items.map((i) => ({
+        name: i.name,
+        description: i.description,
+        price: String(i.price),
+        category: i.category,
+        imageUrl: i.imageUrl,
+        isRecommended: i.isRecommended ?? false,
+        fontSizeTier: i.fontSizeTier,
+      })),
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    buffer = await renderToBuffer(docElement as any);
+  } catch (e) {
+    console.error("PDF render error:", e);
+    return NextResponse.json(
+      { error: "Failed to generate PDF. Please ensure all menu items have valid data." },
+      { status: 500 }
+    );
+  }
 
   const filename = `menu-${menuId}-${template}-${Date.now()}.pdf`;
   let url: string;
   try {
-    url = await uploadPdf(Buffer.from(buffer), filename);
+    url = await uploadPdf(buffer, filename);
   } catch (e) {
+    console.error("PDF upload error:", e);
     return NextResponse.json(
       { error: "PDF generated but save failed. Ensure public/uploads is writable." },
       { status: 500 }
