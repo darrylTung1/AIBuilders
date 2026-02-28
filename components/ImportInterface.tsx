@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, FileText, CheckCircle, AlertCircle, X, Database, FileSpreadsheet } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, X, Database, FileSpreadsheet, ChevronDown, ChevronUp, Info } from "lucide-react";
 
 interface ImportInterfaceProps {
   onImport: (sql: string, fileName?: string) => Promise<void>;
@@ -24,6 +24,7 @@ export function ImportInterface({ onImport, onCancel }: ImportInterfaceProps) {
   const [sqlInput, setSqlInput] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<ParsedRow[]>([]);
+  const [showFormatGuide, setShowFormatGuide] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -303,10 +304,73 @@ export function ImportInterface({ onImport, onCancel }: ImportInterfaceProps) {
           <textarea
             value={sqlInput}
             onChange={(e) => setSqlInput(e.target.value)}
-            placeholder="Paste your INSERT INTO statement here..."
+            placeholder="INSERT INTO menu (name, description, price, popularity, category) VALUES\n('Dish Name', 'Description', 12.99, 85, 'Category');"
             rows={6}
             className="w-full px-4 py-3 border border-slate-200 rounded-lg font-mono text-sm text-navy-900 placeholder:text-slate-400 focus:border-navy-500 focus:ring-2 focus:ring-navy-200 outline-none resize-y"
           />
+
+          {/* Format Guide */}
+          <div className="mt-3 border border-slate-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowFormatGuide(!showFormatGuide)}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-sm text-navy-700">
+                <Info className="w-4 h-4" />
+                <span className="font-medium">SQL Format Guide</span>
+              </div>
+              {showFormatGuide ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+            {showFormatGuide && (
+              <div className="p-4 bg-white text-sm space-y-4">
+                <div>
+                  <h4 className="font-semibold text-navy-900 mb-2">Required Format</h4>
+                  <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-x-auto text-slate-700">
+{`INSERT INTO menu (name, description, price, popularity, category) VALUES
+('Margherita Pizza', 'Fresh basil and mozzarella', 14.99, 95, 'Mains'),
+('Caesar Salad', 'Romaine with parmesan', 9.50, 72, 'Starters');`}
+                  </pre>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-navy-900 mb-2">Columns</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-500" />
+                      <span className="text-slate-700"><code className="bg-slate-100 px-1 rounded">name</code> <span className="text-rose-600 text-xs">(required)</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-rose-500" />
+                      <span className="text-slate-700"><code className="bg-slate-100 px-1 rounded">price</code> <span className="text-rose-600 text-xs">(required)</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-300" />
+                      <span className="text-slate-700"><code className="bg-slate-100 px-1 rounded">description</code></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-300" />
+                      <span className="text-slate-700"><code className="bg-slate-100 px-1 rounded">category</code></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-300" />
+                      <span className="text-slate-700"><code className="bg-slate-100 px-1 rounded">popularity</code> or <code className="bg-slate-100 px-1 rounded">sales_count</code></span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-navy-900 mb-2">Column Aliases</h4>
+                  <p className="text-slate-600 text-xs">
+                    These alternate names are also supported: <code className="bg-slate-100 px-1 rounded">item_name</code> or <code className="bg-slate-100 px-1 rounded">dish</code> → name, 
+                    <code className="bg-slate-100 px-1 rounded">desc</code> → description, 
+                    <code className="bg-slate-100 px-1 rounded">sales</code> → popularity
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center justify-between mt-3">
             <button
               onClick={loadSample}
