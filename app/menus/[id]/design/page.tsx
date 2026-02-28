@@ -8,7 +8,12 @@ import { MenuItemEditor } from "@/components/MenuItemEditor";
 import { MenuDesignPreview, TEMPLATES } from "@/components/MenuDesignPreview";
 import type { MenuItem, Menu, Restaurant } from "@/lib/db/schema";
 import type { MenuDesignSuggestion } from "@/app/api/ai/design-menu/route";
-import { ArrowLeft, Sparkles, FileText, TrendingUp, Wand2, Check, Loader2, Star, Wine, ChefHat, ImageIcon } from "lucide-react";
+import { ArrowLeft, FileText, TrendingUp, Wand2, Check, Loader2, Star, ChefHat, ImageIcon, X, Download, AlertCircle } from "lucide-react";
+
+type StatusMessage = {
+  type: "success" | "error" | "info";
+  text: string;
+} | null;
 
 export default function MenuDesignPage() {
   const params = useParams();
@@ -23,6 +28,15 @@ export default function MenuDesignPage() {
   const [generatingDesign, setGeneratingDesign] = useState(false);
   const [design, setDesign] = useState<MenuDesignSuggestion | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("modern");
+  const [statusMessage, setStatusMessage] = useState<StatusMessage>(null);
+
+  // Auto-clear status after 5 seconds
+  useEffect(() => {
+    if (statusMessage) {
+      const timer = setTimeout(() => setStatusMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
 
   useEffect(() => {
     if (Number.isNaN(menuId)) return;
@@ -54,8 +68,8 @@ export default function MenuDesignPage() {
 
   async function generateAIDesign() {
     setGeneratingDesign(true);
+    setStatusMessage({ type: "info", text: "Analyzing menu and selecting best design..." });
     try {
-      // Send full item data for AI analysis
       const itemsData = items.map(item => ({
         name: item.name,
         description: item.description,
@@ -71,7 +85,6 @@ export default function MenuDesignPage() {
           restaurantName: restaurant?.name,
           cuisineType: restaurant?.cuisineType,
           theme: restaurant?.theme,
-          targetCustomer: "general dining",
           items: itemsData,
         }),
       });
@@ -79,8 +92,12 @@ export default function MenuDesignPage() {
       if (data.error) throw new Error(data.error);
       setDesign(data);
       setSelectedTemplate(data.template);
+      setStatusMessage({ 
+        type: "success", 
+        text: `Design applied: ${data.template} template with ${data.chefRecommendations?.length || 0} chef picks` 
+      });
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to generate design");
+      setStatusMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to generate design" });
     } finally {
       setGeneratingDesign(false);
     }
@@ -96,9 +113,10 @@ export default function MenuDesignPage() {
         colorScheme: { primary: "#102A43", secondary: "#486581", accent: "#F59E0B", background: "#F8FAFC", text: "#1E293B" },
         typography: { heading: "Inter", body: "Inter", style: "Clean" },
         layout: { columns: 2, showImages: true, showDescriptions: true, categoryOrder: [] },
-        reasoning: "Manual selection",
+        reasoning: "",
       });
     }
+    setStatusMessage({ type: "success", text: `Switched to ${templateId} template` });
   }
 
   async function updateItem(itemId: number, updates: Partial<MenuItem>) {
@@ -121,6 +139,7 @@ export default function MenuDesignPage() {
 
   async function exportPdf() {
     setExportingPdf(true);
+    setStatusMessage({ type: "info", text: "Generating PDF..." });
     try {
       const res = await fetch(`/api/menus/${menuId}/export-pdf`, {
         method: "POST",
@@ -129,17 +148,36 @@ export default function MenuDesignPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Export failed");
-      if (data.url) window.open(data.url, "_blank");
+      if (data.url) {
+        // Download the PDF
+        const link = document.createElement("a");
+        link.href = data.url;
+        link.download = `${menu?.name || "menu"}.pdf`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setStatusMessage({ type: "success", text: "PDF downloaded successfully!" });
+      }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Export failed");
+      setStatusMessage({ type: "error", text: e instanceof Error ? e.message : "Export failed" });
     } finally {
       setExportingPdf(false);
     }
   }
 
-  async function enrichMenu() {
+  async function generateImages() {
     if (items.length === 0) return;
+    
+    const itemsWithoutImages = items.filter(i => !i.imageUrl);
+    if (itemsWithoutImages.length === 0) {
+      setStatusMessage({ type: "info", text: "All items already have images" });
+      return;
+    }
+    
     setEnriching(true);
+    setStatusMessage({ type: "info", text: `Generating images for ${itemsWithoutImages.length} item(s)... This may take a minute.` });
+    
     try {
       const res = await fetch(`/api/menus/${menuId}/enrich`, {
         method: "POST",
@@ -148,16 +186,19 @@ export default function MenuDesignPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Image generation failed");
+      
+      // Refresh items
       const itemsRes = await fetch(`/api/menus/${menuId}/items`);
       const nextItems = await itemsRes.json();
       setItems(Array.isArray(nextItems) ? nextItems : []);
+      
       if (data.errors?.length) {
-        alert(`Generated images for ${data.updated} item(s). Some errors: ${data.errors.slice(0, 3).join("; ")}`);
+        setStatusMessage({ type: "error", text: `Generated ${data.updated} image(s). Errors: ${data.errors[0]}` });
       } else {
-        alert(`Generated images for ${data.updated} item(s).`);
+        setStatusMessage({ type: "success", text: `Generated ${data.updated} food image(s) with WaveSpeed AI` });
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Image generation failed. Set WAVESPEED_API_KEY.");
+      setStatusMessage({ type: "error", text: e instanceof Error ? e.message : "Image generation failed. Check WAVESPEED_API_KEY." });
     } finally {
       setEnriching(false);
     }
@@ -176,13 +217,11 @@ export default function MenuDesignPage() {
     return "normal";
   }
 
-  // Apply AI-enhanced badges to items
   function getItemWithEnhancements(item: MenuItem) {
-    const enhanced = design?.enhancedItems?.find(e => e.name === item.name);
     return {
       ...item,
       fontSizeTier: item.fontSizeTier ?? computeFontTier(item.popularityScore),
-      isRecommended: item.isRecommended || design?.chefRecommendations?.includes(item.name) || enhanced?.badge === "Chef's Pick",
+      isRecommended: item.isRecommended || design?.chefRecommendations?.includes(item.name) || false,
     };
   }
 
@@ -203,6 +242,7 @@ export default function MenuDesignPage() {
   }
 
   const itemsWithTier = items.map(getItemWithEnhancements);
+  const itemsWithoutImages = items.filter(i => !i.imageUrl).length;
 
   return (
     <DashboardLayout restaurantName={restaurant?.name}>
@@ -215,94 +255,116 @@ export default function MenuDesignPage() {
               Dashboard
             </Link>
             <h1 className="text-2xl font-bold text-navy-900">{menu.name}</h1>
-            <p className="text-slate-500 text-sm mt-0.5">Design & Edit</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={generateAIDesign}
-              disabled={generatingDesign || items.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-5 py-2.5 text-sm font-semibold hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 transition-all"
-            >
-              {generatingDesign ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-              {generatingDesign ? "Designing..." : "AI Design Menu"}
-            </button>
-            <button
-              type="button"
-              onClick={enrichMenu}
-              disabled={enriching || items.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-gold-500 text-navy-900 px-5 py-2.5 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
-            >
-              <ImageIcon className="w-4 h-4" />
-              {enriching ? "Generating..." : "Generate Images"}
-            </button>
-            <button
-              type="button"
-              onClick={exportPdf}
-              disabled={exportingPdf || items.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-navy-900 text-white px-5 py-2.5 text-sm font-semibold hover:bg-navy-800 disabled:opacity-50 transition-colors"
-            >
-              <FileText className="w-4 h-4" />
-              {exportingPdf ? "Exporting..." : "Export PDF"}
-            </button>
-            <Link
-              href={`/menus/${menuId}/analytics`}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <TrendingUp className="w-4 h-4" />
-              Analytics
-            </Link>
+            <p className="text-slate-500 text-sm mt-0.5">{items.length} items • {selectedTemplate} template</p>
           </div>
         </div>
 
-        {/* AI Design Insights */}
-        {design && (design.reasoning || design.chefRecommendations?.length || design.winePairings?.length) && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Design Reasoning */}
-            {design.reasoning && (
-              <div className="card p-4 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wand2 className="w-4 h-4 text-indigo-600" />
-                  <h3 className="font-semibold text-indigo-900 text-sm">AI Design Choice</h3>
-                </div>
-                <p className="text-sm text-indigo-700">{design.reasoning}</p>
-              </div>
-            )}
+        {/* Status Message */}
+        {statusMessage && (
+          <div className={`flex items-center gap-3 p-4 rounded-lg ${
+            statusMessage.type === "success" ? "bg-emerald-50 border border-emerald-200 text-emerald-800" :
+            statusMessage.type === "error" ? "bg-rose-50 border border-rose-200 text-rose-800" :
+            "bg-blue-50 border border-blue-200 text-blue-800"
+          }`}>
+            {statusMessage.type === "success" && <Check className="w-5 h-5 flex-shrink-0" />}
+            {statusMessage.type === "error" && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+            {statusMessage.type === "info" && <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />}
+            <span className="flex-1 text-sm font-medium">{statusMessage.text}</span>
+            <button onClick={() => setStatusMessage(null)} className="p-1 hover:bg-black/5 rounded">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-            {/* Chef Recommendations */}
-            {design.chefRecommendations && design.chefRecommendations.length > 0 && (
-              <div className="card p-4 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <ChefHat className="w-4 h-4 text-amber-600" />
-                  <h3 className="font-semibold text-amber-900 text-sm">Chef&apos;s Recommendations</h3>
-                </div>
-                <ul className="space-y-1">
-                  {design.chefRecommendations.map((item, i) => (
-                    <li key={i} className="text-sm text-amber-800 flex items-center gap-2">
-                      <Star className="w-3 h-3 text-amber-500" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Auto Design Card */}
+          <div className="card p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <Wand2 className="w-5 h-5 text-purple-600" />
               </div>
-            )}
+              <div>
+                <h3 className="font-semibold text-navy-900">Auto Design</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Picks template & colors based on your cuisine type
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={generateAIDesign}
+              disabled={generatingDesign || items.length === 0}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-purple-500 text-white px-4 py-2.5 text-sm font-semibold hover:bg-purple-600 disabled:opacity-50 transition-colors"
+            >
+              {generatingDesign ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              {generatingDesign ? "Analyzing..." : "Apply Best Design"}
+            </button>
+          </div>
 
-            {/* Wine Pairings */}
-            {design.winePairings && design.winePairings.length > 0 && (
-              <div className="card p-4 bg-gradient-to-br from-rose-50 to-red-50 border-rose-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wine className="w-4 h-4 text-rose-600" />
-                  <h3 className="font-semibold text-rose-900 text-sm">Wine Pairings</h3>
-                </div>
-                <ul className="space-y-1">
-                  {design.winePairings.map((pairing, i) => (
-                    <li key={i} className="text-sm text-rose-800">
-                      <span className="font-medium">{pairing.itemName}:</span> {pairing.wine}
-                    </li>
-                  ))}
-                </ul>
+          {/* Generate Images Card */}
+          <div className="card p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-gold-100 flex items-center justify-center flex-shrink-0">
+                <ImageIcon className="w-5 h-5 text-gold-600" />
               </div>
-            )}
+              <div>
+                <h3 className="font-semibold text-navy-900">Food Photos</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {itemsWithoutImages > 0 
+                    ? `Generate AI photos for ${itemsWithoutImages} item(s)` 
+                    : "All items have images"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={generateImages}
+              disabled={enriching || items.length === 0 || itemsWithoutImages === 0}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gold-500 text-navy-900 px-4 py-2.5 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
+            >
+              {enriching ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+              {enriching ? "Generating..." : itemsWithoutImages > 0 ? `Generate ${itemsWithoutImages} Photos` : "All Done"}
+            </button>
+          </div>
+
+          {/* Export PDF Card */}
+          <div className="card p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-navy-100 flex items-center justify-center flex-shrink-0">
+                <Download className="w-5 h-5 text-navy-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-navy-900">Export Menu</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Download as PDF with current template
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={exportPdf}
+              disabled={exportingPdf || items.length === 0}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-navy-900 text-white px-4 py-2.5 text-sm font-semibold hover:bg-navy-800 disabled:opacity-50 transition-colors"
+            >
+              {exportingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {exportingPdf ? "Creating PDF..." : "Download PDF"}
+            </button>
+          </div>
+        </div>
+
+        {/* Design Insights (show after auto-design) */}
+        {design?.chefRecommendations && design.chefRecommendations.length > 0 && (
+          <div className="card p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+            <div className="flex items-center gap-2 mb-2">
+              <ChefHat className="w-4 h-4 text-amber-600" />
+              <h3 className="font-semibold text-amber-900 text-sm">Chef&apos;s Picks (by popularity)</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {design.chefRecommendations.map((item, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-white rounded-md text-sm text-amber-800 border border-amber-200">
+                  <Star className="w-3 h-3 text-amber-500" />
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
@@ -336,9 +398,18 @@ export default function MenuDesignPage() {
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
           {/* Edit Items Panel */}
           <div className="xl:col-span-2 card overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <h2 className="font-semibold text-navy-900">Edit Items</h2>
-              <p className="text-slate-500 text-sm mt-0.5">{items.length} items</p>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-navy-900">Edit Items</h2>
+                <p className="text-slate-500 text-sm mt-0.5">{items.length} items</p>
+              </div>
+              <Link
+                href={`/menus/${menuId}/analytics`}
+                className="inline-flex items-center gap-1 text-sm text-navy-600 hover:text-navy-800"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Analytics
+              </Link>
             </div>
             <div className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
               {items.length === 0 ? (
