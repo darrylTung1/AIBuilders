@@ -5,7 +5,7 @@ AI-powered menu design and analytics: import menus via SQL, generate description
 ## Stack
 
 - **Frontend:** Next.js 15 (App Router), React, Tailwind CSS
-- **Backend:** Next.js API routes, PostgreSQL (Drizzle ORM)
+- **Backend:** Next.js API routes, SQLite (better-sqlite3)
 - **AI:** OpenAI or Anthropic (descriptions, pricing), WaveSpeed AI (food images), OpenAI Vision (OCR, competitor analysis)
 - **Storage:** Local `public/uploads` or Cloudinary
 - **Deploy:** Zeabur (one-click from GitHub)
@@ -18,21 +18,12 @@ AI-powered menu design and analytics: import menus via SQL, generate description
    ```
 
 2. **Database**
-   - Create a PostgreSQL database (local or hosted).
-   - Set `DATABASE_URL` in `.env.local`, e.g.:
-     ```
-     DATABASE_URL=postgresql://user:pass@localhost:5432/menu_engineering
-     ```
-   - Run migrations:
-     ```bash
-     npm run db:generate
-     npm run db:migrate
-     ```
-   - Or apply the schema manually from `lib/db/schema.sql`.
+   - SQLite database is automatically created when you start the application.
+   - Set `DATABASE_URL=file:./dev.db` in `.env.local` (this is the default)
+   - No manual database setup required
 
 3. **Environment (`.env.local`)**
-   - `DATABASE_URL` – PostgreSQL connection string
-   - `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` – for descriptions and pricing (and OCR/Vision if using OpenAI)
+   - `DATABASE_URL` – SQLite database file (default: `file:./dev.db`)
    - `WAVESPEED_API_KEY` – for AI-generated food images
    - `CLOUDINARY_URL` (optional) – e.g. `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` for image uploads
    - `NEXT_PUBLIC_APP_URL` – e.g. `http://localhost:3000` for local dev
