@@ -91,8 +91,8 @@ export default function MenuDesignPage() {
     return "normal";
   }
 
-  if (loading) return <div className="text-stone-500">Loading...</div>;
-  if (error || !menu) return <div className="text-red-600">{error ?? "Menu not found"}</div>;
+  if (loading) return <div className="py-20 text-center text-stone-500 font-medium">Loading…</div>;
+  if (error || !menu) return <div className="rounded-2xl bg-red-50 border border-red-200 p-6 text-red-700">{error ?? "Menu not found"}</div>;
 
   const itemsWithTier = items.map((i) => ({
     ...i,
@@ -101,23 +101,24 @@ export default function MenuDesignPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <Link href="/dashboard" className="text-amber-600 hover:underline text-sm">← Dashboard</Link>
-          <h1 className="text-2xl font-semibold text-stone-800 mt-1">{menu.name} – Design</h1>
+          <Link href="/dashboard" className="text-amber-600 hover:text-amber-700 font-medium text-sm">← Dashboard</Link>
+          <h1 className="text-2xl font-bold text-stone-900 mt-1">{menu.name}</h1>
+          <p className="text-stone-500 text-sm mt-0.5">Design</p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={exportPdf}
             disabled={exportingPdf || items.length === 0}
-            className="rounded-lg bg-stone-800 text-white px-4 py-2 text-sm font-medium hover:bg-stone-700 disabled:opacity-50"
+            className="rounded-xl bg-stone-800 text-white px-5 py-2.5 text-sm font-semibold hover:bg-stone-700 disabled:opacity-50 transition-colors"
           >
-            {exportingPdf ? "Exporting..." : "Export PDF"}
+            {exportingPdf ? "Exporting…" : "Export PDF"}
           </button>
           <Link
             href={`/menus/${menuId}/analytics`}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+            className="rounded-xl border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
           >
             Analytics
           </Link>
@@ -125,11 +126,14 @@ export default function MenuDesignPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <h2 className="text-lg font-medium text-stone-700 mb-4">Edit items</h2>
-          <div className="space-y-4">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/80">
+            <h2 className="font-semibold text-stone-800">Edit items</h2>
+            <p className="text-stone-500 text-sm mt-0.5">Update names, descriptions, prices, photos, and recommended badges.</p>
+          </div>
+          <div className="p-5 space-y-4">
             {items.length === 0 ? (
-              <p className="text-stone-500">No items. Add items from the restaurant menu page or import SQL.</p>
+              <p className="text-stone-500 py-6 text-center text-sm">No items yet. Go to the restaurant page and import from SQL or create a blank menu.</p>
             ) : (
               items.map((item) => (
                 <MenuItemEditor
@@ -144,9 +148,14 @@ export default function MenuDesignPage() {
             )}
           </div>
         </div>
-        <div>
-          <h2 className="text-lg font-medium text-stone-700 mb-4">Preview</h2>
-          <MenuPreview items={itemsWithTier} title={menu.name} />
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/80">
+            <h2 className="font-semibold text-stone-800">Preview</h2>
+            <p className="text-stone-500 text-sm mt-0.5">How your menu will look.</p>
+          </div>
+          <div className="p-5">
+            <MenuPreview items={itemsWithTier} title={menu.name} />
+          </div>
         </div>
       </div>
     </div>

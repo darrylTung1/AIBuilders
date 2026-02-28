@@ -28,65 +28,65 @@ export default function MenuAnalyticsPage() {
       .finally(() => setLoading(false));
   }, [menuId]);
 
-  if (loading) return <div className="text-stone-500">Loading...</div>;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (loading) return <div className="py-20 text-center text-stone-500 font-medium">Loading…</div>;
+  if (error) return <div className="rounded-2xl bg-red-50 border border-red-200 p-6 text-red-700">Error: {error}</div>;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/dashboard" className="text-amber-600 hover:underline text-sm">← Dashboard</Link>
-        <h1 className="text-2xl font-semibold text-stone-800 mt-1">{menuName} – Analytics</h1>
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <Link href="/dashboard" className="text-amber-600 hover:text-amber-700 font-medium text-sm">← Dashboard</Link>
+          <h1 className="text-2xl font-bold text-stone-900 mt-1">{menuName}</h1>
+          <p className="text-stone-500 text-sm mt-0.5">Analytics</p>
+        </div>
+        <Link
+          href={`/menus/${menuId}/design`}
+          className="inline-flex items-center rounded-xl bg-amber-500 px-5 py-2.5 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+        >
+          Back to Design
+        </Link>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-stone-200">
-          <thead>
-            <tr className="bg-stone-100">
-              <th className="border border-stone-200 px-4 py-2 text-left text-sm font-medium text-stone-700">Item</th>
-              <th className="border border-stone-200 px-4 py-2 text-right text-sm font-medium text-stone-700">Price</th>
-              <th className="border border-stone-200 px-4 py-2 text-right text-sm font-medium text-stone-700">Cost</th>
-              <th className="border border-stone-200 px-4 py-2 text-right text-sm font-medium text-stone-700">Margin</th>
-              <th className="border border-stone-200 px-4 py-2 text-right text-sm font-medium text-stone-700">Margin %</th>
-              <th className="border border-stone-200 px-4 py-2 text-right text-sm font-medium text-stone-700">Popularity</th>
-              <th className="border border-stone-200 px-4 py-2 text-center text-sm font-medium text-stone-700">Recommended</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((row) => (
-              <tr key={row.id} className="hover:bg-stone-50">
-                <td className="border border-stone-200 px-4 py-2 text-stone-800">{row.name}</td>
-                <td className="border border-stone-200 px-4 py-2 text-right">${row.price.toFixed(2)}</td>
-                <td className="border border-stone-200 px-4 py-2 text-right">
-                  {row.cost != null ? `$${row.cost.toFixed(2)}` : "–"}
-                </td>
-                <td className="border border-stone-200 px-4 py-2 text-right">
-                  {row.margin != null ? `$${row.margin.toFixed(2)}` : "–"}
-                </td>
-                <td className="border border-stone-200 px-4 py-2 text-right">
-                  {row.marginPercent != null ? `${row.marginPercent.toFixed(1)}%` : "–"}
-                </td>
-                <td className="border border-stone-200 px-4 py-2 text-right">
-                  {row.popularityScore != null ? String(row.popularityScore) : "–"}
-                </td>
-                <td className="border border-stone-200 px-4 py-2 text-center">
-                  {row.isRecommended ? (
-                    <span className="rounded bg-amber-500 text-white text-xs px-2 py-0.5">Yes</span>
-                  ) : (
-                    "–"
-                  )}
-                </td>
+      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/80">
+          <h2 className="font-semibold text-stone-800">Item profitability & popularity</h2>
+          <p className="text-stone-500 text-sm mt-0.5">Margin and popularity by menu item.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-stone-50 border-b border-stone-200">
+                <th className="px-5 py-3 text-left text-sm font-semibold text-stone-700">Item</th>
+                <th className="px-5 py-3 text-right text-sm font-semibold text-stone-700">Price</th>
+                <th className="px-5 py-3 text-right text-sm font-semibold text-stone-700">Cost</th>
+                <th className="px-5 py-3 text-right text-sm font-semibold text-stone-700">Margin</th>
+                <th className="px-5 py-3 text-right text-sm font-semibold text-stone-700">Margin %</th>
+                <th className="px-5 py-3 text-right text-sm font-semibold text-stone-700">Popularity</th>
+                <th className="px-5 py-3 text-center text-sm font-semibold text-stone-700">Recommended</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((row) => (
+                <tr key={row.id} className="border-b border-stone-100 hover:bg-stone-50/50 transition-colors">
+                  <td className="px-5 py-3 font-medium text-stone-800">{row.name}</td>
+                  <td className="px-5 py-3 text-right text-stone-700">${row.price.toFixed(2)}</td>
+                  <td className="px-5 py-3 text-right text-stone-600">{row.cost != null ? `$${row.cost.toFixed(2)}` : "–"}</td>
+                  <td className="px-5 py-3 text-right text-stone-600">{row.margin != null ? `$${row.margin.toFixed(2)}` : "–"}</td>
+                  <td className="px-5 py-3 text-right text-stone-600">{row.marginPercent != null ? `${row.marginPercent.toFixed(1)}%` : "–"}</td>
+                  <td className="px-5 py-3 text-right text-stone-600">{row.popularityScore != null ? String(row.popularityScore) : "–"}</td>
+                  <td className="px-5 py-3 text-center">
+                    {row.isRecommended ? (
+                      <span className="inline-flex rounded-lg bg-amber-500 text-white text-xs font-medium px-2 py-1">Yes</span>
+                    ) : (
+                      "–"
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-
-      <Link
-        href={`/menus/${menuId}/design`}
-        className="inline-block rounded-lg bg-amber-600 px-4 py-2 text-white text-sm font-medium hover:bg-amber-700"
-      >
-        Back to Design
-      </Link>
     </div>
   );
 }

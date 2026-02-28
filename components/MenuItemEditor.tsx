@@ -85,7 +85,7 @@ export function MenuItemEditor({ item, cuisineType, theme, onSave, onDelete }: P
   }
 
   return (
-    <div className="border border-stone-200 rounded-lg p-4 bg-white space-y-4">
+    <div className="rounded-xl border border-stone-200 bg-white p-4 space-y-4 shadow-sm">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 space-y-3">
           <div>

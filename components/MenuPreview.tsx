@@ -28,22 +28,22 @@ export function MenuPreview({ items, title = "Menu" }: Props) {
   }, {});
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6 max-w-lg">
-      <h2 className="text-2xl font-semibold text-stone-800 border-b border-stone-200 pb-2 mb-4">{title}</h2>
-      <div className="space-y-6">
+    <div className="rounded-xl border border-stone-200 bg-stone-50/50 p-5 max-w-lg">
+      <h2 className="text-xl font-bold text-stone-900 border-b border-stone-200 pb-2 mb-4">{title}</h2>
+      <div className="space-y-5">
         {Object.entries(byCategory).map(([category, catItems]) => (
           <div key={category}>
-            <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide mb-2">{category}</h3>
+            <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">{category}</h3>
             <ul className="space-y-3">
               {catItems.map((item) => (
-                <li key={item.id} className="flex gap-3">
+                <li key={item.id} className="flex gap-3 p-2 rounded-lg bg-white/80">
                   {item.imageUrl && (
-                    <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-stone-100">
+                    <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200/50">
                       <Image
                         src={item.imageUrl}
                         alt={item.name}
-                        width={64}
-                        height={64}
+                        width={56}
+                        height={56}
                         className="object-cover w-full h-full"
                         unoptimized
                       />
@@ -53,15 +53,15 @@ export function MenuPreview({ items, title = "Menu" }: Props) {
                     <div className="flex items-start justify-between gap-2">
                       <span className={tierClass(item.fontSizeTier ?? "normal")}>{item.name}</span>
                       {item.isRecommended && (
-                        <span className="flex-shrink-0 rounded bg-amber-500 text-white text-xs px-2 py-0.5 font-medium">
+                        <span className="flex-shrink-0 rounded-md bg-amber-500 text-white text-xs font-medium px-2 py-0.5">
                           Recommended
                         </span>
                       )}
                     </div>
                     {item.description && (
-                      <p className="text-sm text-stone-600 mt-0.5">{item.description}</p>
+                      <p className="text-sm text-stone-600 mt-0.5 line-clamp-2">{item.description}</p>
                     )}
-                    <p className="text-stone-700 font-medium mt-1">${Number(item.price).toFixed(2)}</p>
+                    <p className="text-stone-800 font-semibold mt-1">${Number(item.price).toFixed(2)}</p>
                   </div>
                 </li>
               ))}
