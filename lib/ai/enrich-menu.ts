@@ -1,21 +1,21 @@
 /**
- * AI-powered menu enrichment using restaurant and menu data from the database.
- * Generates descriptions, sets recommended badges from popularity, and optionally suggests prices.
+ * AI-powered menu enrichment using WaveSpeed for image generation.
+ * Generates food photos for menu items and sets recommended badges from popularity.
  */
 
-import { generateDescription } from "./llm";
+import { generateFoodImage } from "./wavespeed";
+import { uploadImage } from "@/lib/storage/upload";
 import type { MenuItem, Restaurant } from "@/lib/db/schema";
 
 export type EnrichOptions = {
-  descriptions?: boolean;   // Generate AI descriptions for items that lack one
+  images?: boolean;          // Generate AI food images for items that lack one
   recommendations?: boolean; // Set is_recommended and font_size_tier from popularity
-  descriptionsOnly?: boolean; // Shorthand: only fill descriptions
 };
 
 export type EnrichResult = {
   updated: number;
   errors: string[];
-  items: { id: number; name: string; description?: string; isRecommended?: boolean; fontSizeTier?: string }[];
+  items: { id: number; name: string; imageUrl?: string; isRecommended?: boolean; fontSizeTier?: string }[];
 };
 
 export async function enrichMenuWithAI(
@@ -23,7 +23,7 @@ export async function enrichMenuWithAI(
   restaurant: Pick<Restaurant, "cuisineType" | "theme"> | null,
   options: EnrichOptions
 ): Promise<EnrichResult> {
-  const { descriptions = true, recommendations = true } = options;
+  const { images = true, recommendations = true } = options;
   const cuisineType = restaurant?.cuisineType ?? undefined;
   const theme = restaurant?.theme ?? undefined;
   const errors: string[] = [];
@@ -53,24 +53,30 @@ export async function enrichMenuWithAI(
     }
   }
 
-  // Generate descriptions for items that don't have one
-  if (descriptions) {
+  // Generate images for items that don't have one
+  if (images) {
     for (const item of items) {
-      const hasDescription = item.description != null && String(item.description).trim().length > 0;
-      if (!hasDescription) {
+      const hasImage = item.imageUrl != null && String(item.imageUrl).trim().length > 0;
+      if (!hasImage) {
         try {
-          const description = await generateDescription({
+          // Generate food image with WaveSpeed
+          const imageBuffer = await generateFoodImage({
             itemName: item.name,
             cuisineType,
             theme,
           });
-          if (description) {
+          
+          // Upload and get URL
+          const filename = `food-${item.id}-${item.name.replace(/[^a-zA-Z0-9]/g, "-")}.png`;
+          const imageUrl = await uploadImage(imageBuffer, filename);
+          
+          if (imageUrl) {
             const existing = updated.find((u) => u.id === item.id);
-            if (existing) existing.description = description;
-            else updated.push({ id: item.id, name: item.name, description });
+            if (existing) existing.imageUrl = imageUrl;
+            else updated.push({ id: item.id, name: item.name, imageUrl });
           }
         } catch (e) {
-          errors.push(`${item.name}: ${e instanceof Error ? e.message : "Description generation failed"}`);
+          errors.push(`${item.name}: ${e instanceof Error ? e.message : "Image generation failed"}`);
         }
       } else if (recommendations) {
         const existing = updated.find((u) => u.id === item.id);

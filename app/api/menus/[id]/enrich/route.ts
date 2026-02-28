@@ -13,10 +13,10 @@ export async function POST(
     return NextResponse.json({ error: "Invalid menu id" }, { status: 400 });
   }
 
-  let options = { descriptions: true, recommendations: true };
+  let options = { images: true, recommendations: true };
   try {
     const body = await request.json().catch(() => ({}));
-    if (typeof body.descriptions === "boolean") options.descriptions = body.descriptions;
+    if (typeof body.images === "boolean") options.images = body.images;
     if (typeof body.recommendations === "boolean") options.recommendations = body.recommendations;
   } catch {
     // use defaults
@@ -41,8 +41,8 @@ export async function POST(
 
   // Apply updates to the database
   for (const u of result.items) {
-    const updates: { description?: string; isRecommended?: boolean; fontSizeTier?: string } = {};
-    if (u.description != null) updates.description = u.description;
+    const updates: { imageUrl?: string; isRecommended?: boolean; fontSizeTier?: string } = {};
+    if (u.imageUrl != null) updates.imageUrl = u.imageUrl;
     if (u.isRecommended != null) updates.isRecommended = u.isRecommended;
     if (u.fontSizeTier != null) updates.fontSizeTier = u.fontSizeTier;
     if (Object.keys(updates).length > 0) {
@@ -58,7 +58,7 @@ export async function POST(
     updated: result.updated,
     errors: result.errors,
     message: result.errors.length > 0
-      ? `Enriched with ${result.updated} updates. Some items had errors: ${result.errors.join("; ")}`
-      : `Enriched ${result.updated} item(s).`,
+      ? `Generated ${result.updated} images. Some items had errors.`
+      : `Generated images for ${result.updated} item(s).`,
   });
 }

@@ -8,7 +8,7 @@ import { MenuItemEditor } from "@/components/MenuItemEditor";
 import { MenuDesignPreview, TEMPLATES } from "@/components/MenuDesignPreview";
 import type { MenuItem, Menu, Restaurant } from "@/lib/db/schema";
 import type { MenuDesignSuggestion } from "@/app/api/ai/design-menu/route";
-import { ArrowLeft, Sparkles, FileText, TrendingUp, Wand2, Check, Loader2, Star, Wine, ChefHat } from "lucide-react";
+import { ArrowLeft, Sparkles, FileText, TrendingUp, Wand2, Check, Loader2, Star, Wine, ChefHat, ImageIcon } from "lucide-react";
 
 export default function MenuDesignPage() {
   const params = useParams();
@@ -144,18 +144,20 @@ export default function MenuDesignPage() {
       const res = await fetch(`/api/menus/${menuId}/enrich`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ descriptions: true, recommendations: true }),
+        body: JSON.stringify({ images: true, recommendations: true }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Enrich failed");
+      if (!res.ok) throw new Error(data.error ?? "Image generation failed");
       const itemsRes = await fetch(`/api/menus/${menuId}/items`);
       const nextItems = await itemsRes.json();
       setItems(Array.isArray(nextItems) ? nextItems : []);
       if (data.errors?.length) {
-        alert(`Enriched ${data.updated} item(s). Some errors: ${data.errors.slice(0, 3).join("; ")}`);
+        alert(`Generated images for ${data.updated} item(s). Some errors: ${data.errors.slice(0, 3).join("; ")}`);
+      } else {
+        alert(`Generated images for ${data.updated} item(s).`);
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Enrich failed. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.");
+      alert(e instanceof Error ? e.message : "Image generation failed. Set WAVESPEED_API_KEY.");
     } finally {
       setEnriching(false);
     }
@@ -231,8 +233,8 @@ export default function MenuDesignPage() {
               disabled={enriching || items.length === 0}
               className="inline-flex items-center gap-2 rounded-xl bg-gold-500 text-navy-900 px-5 py-2.5 text-sm font-semibold hover:bg-gold-400 disabled:opacity-50 transition-colors"
             >
-              <Sparkles className="w-4 h-4" />
-              {enriching ? "Processing..." : "AI Enrich"}
+              <ImageIcon className="w-4 h-4" />
+              {enriching ? "Generating..." : "Generate Images"}
             </button>
             <button
               type="button"

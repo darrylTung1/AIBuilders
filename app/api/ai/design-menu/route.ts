@@ -41,119 +41,13 @@ export type MenuDesignSuggestion = {
   chefRecommendations?: string[];
   enhancedItems?: Array<{
     name: string;
-    enhancedDescription?: string;
     badge?: string;
     highlight?: boolean;
   }>;
-  winePairings?: Array<{
-    itemName: string;
-    wine: string;
-  }>;
 };
 
-// Build the AI prompt based on user's guide
-function buildDesignPrompt(params: DesignRequest): string {
-  const { restaurantName, cuisineType, theme, targetCustomer, items = [] } = params;
-
-  const menuData = items.map(item => ({
-    name: item.name,
-    description: item.description || "",
-    price: typeof item.price === "string" ? parseFloat(item.price) : item.price,
-    category: item.category || "Uncategorized",
-    popularity: item.popularityScore ? Number(item.popularityScore) : 50,
-    profitMargin: item.profitMargin || "unknown",
-  }));
-
-  const categories = [...new Set(menuData.map(i => i.category))];
-
-  return `You are a professional restaurant menu designer and menu engineer. Analyze this menu data and create a comprehensive design recommendation.
-
-RESTAURANT CONTEXT:
-- Name: ${restaurantName || "Restaurant"}
-- Cuisine Type: ${cuisineType || "General"}
-- Theme/Atmosphere: ${theme || "Not specified"}
-- Target Customer: ${targetCustomer || "General dining"}
-
-MENU ITEMS (${menuData.length} items):
-${JSON.stringify(menuData, null, 2)}
-
-EXISTING CATEGORIES: ${categories.join(", ")}
-
-YOUR TASKS:
-
-1. **Template Selection** - Choose the best template:
-   - "elegant" for fine dining, French, upscale
-   - "classic" for Italian, traditional, warm atmospheres
-   - "modern" for contemporary, fusion, casual upscale
-   - "rustic" for BBQ, Mexican, comfort food, casual
-
-2. **Color Scheme** - Provide hex colors that match the cuisine and atmosphere:
-   - primary: Main brand color for headings
-   - secondary: Supporting color for accents
-   - accent: Highlight color for badges/prices
-   - background: Page background
-   - text: Main text color
-
-3. **Category Ordering** - Reorder categories logically:
-   - Starters/Appetizers first
-   - Mains in the middle
-   - Desserts and Drinks last
-
-4. **Chef's Recommendations** - Select 2-3 items to highlight based on:
-   - High popularity (>80)
-   - Good profit potential
-   - Signature dishes that represent the restaurant
-
-5. **Item Enhancements**:
-   - For items with popularity >90: Add "Popular" badge
-   - For items with high profit margin: Suggest highlighting
-   - For expensive mains (>$20): Suggest a wine pairing
-   - For items with missing/weak descriptions: Suggest an enhanced 8-word description
-
-RESPOND IN THIS EXACT JSON FORMAT:
-{
-  "template": "modern|classic|elegant|rustic",
-  "colorScheme": {
-    "primary": "#hex",
-    "secondary": "#hex",
-    "accent": "#hex",
-    "background": "#hex",
-    "text": "#hex"
-  },
-  "typography": {
-    "heading": "Font name",
-    "body": "Font name",
-    "style": "Brief description of typography approach"
-  },
-  "layout": {
-    "columns": 1 or 2,
-    "showImages": true/false,
-    "showDescriptions": true/false,
-    "categoryOrder": ["Category1", "Category2", ...]
-  },
-  "reasoning": "2-3 sentences explaining your design choices",
-  "chefRecommendations": ["Item Name 1", "Item Name 2", "Item Name 3"],
-  "enhancedItems": [
-    {
-      "name": "Item Name",
-      "enhancedDescription": "New appetizing 8-word description",
-      "badge": "Popular|Chef's Pick|House Favorite|null",
-      "highlight": true/false
-    }
-  ],
-  "winePairings": [
-    {
-      "itemName": "Expensive Main Name",
-      "wine": "Wine recommendation"
-    }
-  ]
-}
-
-Only output valid JSON, no other text.`;
-}
-
-// Fallback design when no AI is available
-function getFallbackDesign(params: DesignRequest): MenuDesignSuggestion {
+// Smart design selection based on cuisine/theme
+function getDesignSuggestion(params: DesignRequest): MenuDesignSuggestion {
   const { cuisineType, theme, items = [] } = params;
   const cuisine = (cuisineType || "").toLowerCase();
   const atmosphere = (theme || "").toLowerCase();
@@ -189,7 +83,7 @@ function getFallbackDesign(params: DesignRequest): MenuDesignSuggestion {
     };
   }).filter(i => i.badge || i.highlight);
 
-  // Base design selection
+  // Italian cuisine
   if (cuisine.includes("italian") || cuisine.includes("pizza") || cuisine.includes("pasta")) {
     return {
       template: "classic",
@@ -202,6 +96,7 @@ function getFallbackDesign(params: DesignRequest): MenuDesignSuggestion {
     };
   }
 
+  // French / Fine dining
   if (cuisine.includes("french") || atmosphere.includes("upscale") || atmosphere.includes("fine dining") || atmosphere.includes("elegant")) {
     return {
       template: "elegant",
@@ -214,7 +109,21 @@ function getFallbackDesign(params: DesignRequest): MenuDesignSuggestion {
     };
   }
 
-  if (cuisine.includes("mexican") || cuisine.includes("bbq") || atmosphere.includes("rustic") || atmosphere.includes("casual")) {
+  // Japanese
+  if (cuisine.includes("japanese") || cuisine.includes("sushi") || cuisine.includes("ramen")) {
+    return {
+      template: "modern",
+      colorScheme: { primary: "#1a1a2e", secondary: "#e94560", accent: "#c9a227", background: "#f5f5f5", text: "#1a1a2e" },
+      typography: { heading: "Noto Sans", body: "Inter", style: "Clean, minimal with bold accents" },
+      layout: { columns: 2, showImages: true, showDescriptions: true, categoryOrder: sortedCategories },
+      reasoning: "Modern Japanese aesthetic with clean lines and minimalist design.",
+      chefRecommendations,
+      enhancedItems,
+    };
+  }
+
+  // Mexican / BBQ / Casual
+  if (cuisine.includes("mexican") || cuisine.includes("bbq") || cuisine.includes("burger") || atmosphere.includes("rustic") || atmosphere.includes("casual")) {
     return {
       template: "rustic",
       colorScheme: { primary: "#5D4037", secondary: "#BF360C", accent: "#FFC107", background: "#EFEBE9", text: "#3E2723" },
@@ -238,61 +147,11 @@ function getFallbackDesign(params: DesignRequest): MenuDesignSuggestion {
   };
 }
 
-async function callAI(prompt: string): Promise<string> {
-  if (process.env.OPENAI_API_KEY) {
-    const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 2000,
-      temperature: 0.7,
-    });
-    return res.choices[0]?.message?.content?.trim() ?? "";
-  }
-
-  if (process.env.ANTHROPIC_API_KEY) {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const anthropic = new Anthropic();
-    const res = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const text = res.content.find((c) => c.type === "text");
-    return (text && "text" in text ? text.text : "").trim();
-  }
-
-  throw new Error("NO_AI_KEY");
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json() as DesignRequest;
-
-    // Try AI-powered design first
-    try {
-      const prompt = buildDesignPrompt(body);
-      const aiResponse = await callAI(prompt);
-
-      // Parse the JSON response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]) as MenuDesignSuggestion;
-
-        // Validate required fields
-        if (parsed.template && parsed.colorScheme && parsed.layout) {
-          return NextResponse.json(parsed);
-        }
-      }
-    } catch (aiError) {
-      // If AI fails, fall back to rule-based design
-      console.log("AI design failed, using fallback:", aiError instanceof Error ? aiError.message : "unknown");
-    }
-
-    // Fallback to rule-based design
-    const fallback = getFallbackDesign(body);
-    return NextResponse.json(fallback);
+    const design = getDesignSuggestion(body);
+    return NextResponse.json(design);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Design suggestion failed";
     return NextResponse.json({ error: message }, { status: 500 });
