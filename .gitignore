@@ -42,3 +42,4 @@ drizzle/migrations/*.sql
 venv
 __pycache__
 *.pyc
+*.db
