@@ -66,4 +66,4 @@ INSERT INTO menu (name, description, price, popularity, category) VALUES
 
 ## License
 
-MIT
+Copyright 2026 Darryl. All rights reserved.
